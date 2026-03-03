@@ -44,7 +44,7 @@ function AGESS_single_step!(x::AbstractMatrix{Y}, z::AbstractVector{Y}, params::
     end
 
     ## Propose Initial Angle
-    θ = rand() * 2 * π
+    θ = rand(eltype(x)) * 2 * π
     θ_min = θ - 2 * π
     θ_max = θ
 
@@ -74,7 +74,7 @@ function AGESS_single_step!(x::AbstractMatrix{Y}, z::AbstractVector{Y}, params::
         end
 
         ## Propose new angle
-        θ = θ_min + rand() * (θ_max - θ_min)
+        θ = θ_min + rand(eltype(x)) * (θ_max - θ_min)
         @views x[i,:] .= ((x[i-1,:] - μ_adapt) .* cos(θ) .+  (z - μ_adapt) .* sin(θ)) .+ μ_adapt
         @views l_pdf = params.log_posterior(x[i,:])
         L_star = l_pdf
@@ -101,9 +101,9 @@ function AGESS_single_step_1d!(x::AbstractMatrix{Y}, params::AGESS_MCMC_params,
                                μ_adapt::AbstractVector{Y}, 
                                Σ_chol_adapt::LowerTriangular{Y, <:AbstractMatrix{Y}}, i::T) where {Y<:AbstractFloat, T<:Integer}
     l_pdf::eltype(x) = 0.0
-    z::eltype{x} = 0.0
-    y::eltype{x} = 0.0
-    L_star::eltype{x} = 0.0
+    z::eltype(x) = 0.0
+    y::eltype(x) = 0.0
+    L_star::eltype(x) = 0.0
     for j in randperm(params.P)
         
         ## Propose new z from N(0, Σ)
@@ -121,7 +121,7 @@ function AGESS_single_step_1d!(x::AbstractMatrix{Y}, params::AGESS_MCMC_params,
         end
 
         ## Propose Initial Angle
-        θ = rand() * 2 * π
+        θ = rand(eltype(x)) * 2 * π
         θ_min = θ - 2 * π
         θ_max = θ
 
@@ -151,7 +151,7 @@ function AGESS_single_step_1d!(x::AbstractMatrix{Y}, params::AGESS_MCMC_params,
             end
 
             ## Propose new angle
-            θ = θ_min + rand() * (θ_max - θ_min)
+            θ = θ_min + rand(eltype(x)) * (θ_max - θ_min)
             x[i,j] = ((x[i-1,j] - μ_adapt[j]) * cos(θ) +  (z - μ_adapt[j]) * sin(θ)) + μ_adapt[j]
             @views l_pdf = params.log_posterior(x[i,:])
             L_star =  l_pdf
@@ -174,25 +174,25 @@ function AGESS_single_step_1d!(x::AbstractMatrix{Y}, params::AGESS_MCMC_params,
     return l_pdf
 end
 
-function AGESS(log_posterior::Function, n_MCMC::T, P::T,
-               μ_0::Union{<:AbstractVector{Y},Y} = 0.0, Σ_0::Union{<:AbstractMatrix{Y},Y} = 1.0;
+function AGESS(log_posterior::Function, n_MCMC::T, P::T;
+               μ_0::Union{<:AbstractVector{Y},Y} = 0.0, Σ_0::Union{<:AbstractMatrix{Y},Y} = 1.0,
                init_x::Union{<:AbstractVector{Y},Y} = 0.0, t_dist::Bool = true, ν::Y = 6.0, burnin::Y = 0.25,
                ϵ::Y = 0.1, single_step_prop::Y = 0.05, β::Y = 0.5) where {Y<:AbstractFloat, T<:Integer}
    # Get prior mean parameter
    if typeof(μ_0) <: AbstractFloat
-        μ_0 = ones(P) .* μ_0
+        μ_0 = ones(typeof(μ_0), P) .* μ_0
     end
     @argcheck length(μ_0) == P
 
     # Get prior for variance parameter
     if typeof(Σ_0) <: AbstractFloat
         @argcheck Σ_0 > 0.0
-        Σ_0 = diagm(ones(P)) .* Σ_0
+        Σ_0 = diagm(ones(typeof(Σ_0), P)) .* Σ_0
     end
 
     # Initial starting point of markov chain
     if typeof(init_x) <: AbstractFloat
-        init_x = ones(P) .* init_x
+        init_x = ones(typeof(init_x), P) .* init_x
     end
 
     ## Check rest of arguments
@@ -210,10 +210,10 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T,
     x[2,:] .= init_x
 
     ## Auxiliary variable
-    z = zeros(P)
+    z = zeros(eltype(μ_0), P)
 
     ## Storage of log_posterior evaluations
-    l_pdf = zeros(n_MCMC) 
+    l_pdf = zeros(eltype(μ_0), n_MCMC) 
 
     ## Construct AGESS_MCMC_params
     params = AGESS_MCMC_params(log_posterior, μ_0, Σ_0, t_dist, ν, β, single_step_prop,
@@ -221,6 +221,9 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T,
 
     l_pdf[1] = params.log_posterior(init_x)
     @argcheck isfinite(l_pdf[1]) "Initial starting position of Markov chain must have finite posterior density above 0"
+
+
+    burnin_num = floor(typeof(n_MCMC), params.burnin * params.n_MCMC)
 
     μ_adapt = copy(μ_0)
     μ_adapt_ph = copy(μ_0)
@@ -230,7 +233,7 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T,
     Σ_chol_adapt = deepcopy(Σ_chol)
     Σ_chol_adapt_ph = deepcopy(Σ_chol)
 
-    ph_cholesky_update = ones(P)
+    ph_cholesky_update = ones(eltype(μ_0), P)
     w_const = max(2/3, ((cbrt(P) - 1) / cbrt(P)))
     N_J = 2
     n_j = 2
