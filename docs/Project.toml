@@ -1,0 +1,6 @@
+[deps]
+AdaptEllipticalSliceSampler = "630fce29-b4bc-4795-b1a0-7c5b858f73a1"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+
+[sources]
+AdaptEllipticalSliceSampler = {path = ".."}

@@ -21,8 +21,6 @@ struct MCMC_output
 end
 
 
-
-
 function AGESS_single_step!(x::AbstractMatrix{Y}, z::AbstractVector{Y}, params::AGESS_MCMC_params, 
                             ph::AbstractVector{Y},μ_adapt::AbstractVector{Y}, 
                             Σ_chol_adapt::LowerTriangular{Y, <:AbstractMatrix{Y}}, i::T) where {Y<:AbstractFloat, T<:Integer}
@@ -174,6 +172,13 @@ function AGESS_single_step_1d!(x::AbstractMatrix{Y}, params::AGESS_MCMC_params,
     return l_pdf
 end
 
+"""
+    AGESS(log_posterior, n_MCMC, P; μ_0, Σ_0, init_x, t_dist, ν, burnin, ϵ, single_step_prop, β)
+
+Performs adaptive generalized elliptical slice sampling (AGESS) on a target distribution specified by 
+`log_posterior`. The target distribution is of dimension `P` and `n_MCMC` iterations of Markov
+chain Monte Carlo will be performed using the AGESS transition scheme.
+"""
 function AGESS(log_posterior::Function, n_MCMC::T, P::T;
                μ_0::Union{<:AbstractVector{Y},Y} = 0.0, Σ_0::Union{<:AbstractMatrix{Y},Y} = 1.0,
                init_x::Union{<:AbstractVector{Y},Y} = 0.0, t_dist::Bool = true, ν::Y = 6.0, burnin::Y = 0.25,
