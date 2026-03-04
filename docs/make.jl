@@ -6,7 +6,9 @@ makedocs(
     format = Documenter.HTML(),
     modules = [AdaptEllipticalSliceSampler],
     pages = [
-        "Tutorial" => "assets\\tutorial.md",
+        "Tutorials" => [
+            "Banana" => "assets\\Banana.md",
+        ],
     ],
 )
 

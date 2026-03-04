@@ -22,7 +22,7 @@ end
 
 
 function AGESS_single_step!(x::AbstractMatrix{Y}, z::AbstractVector{Y}, params::AGESS_MCMC_params, 
-                            ph::AbstractVector{Y},μ_adapt::AbstractVector{Y}, 
+                            ph::AbstractVector{Y}, μ_adapt::AbstractVector{Y}, 
                             Σ_chol_adapt::LowerTriangular{Y, <:AbstractMatrix{Y}}, i::T) where {Y<:AbstractFloat, T<:Integer}
     l_pdf::eltype(x) = 0.0
     y::eltype(x) = 0.0
@@ -48,8 +48,8 @@ function AGESS_single_step!(x::AbstractMatrix{Y}, z::AbstractVector{Y}, params::
 
     ## Propose initial first move
     @views x[i,:] .= ((x[i-1,:] - μ_adapt) .* cos(θ) .+  (z - μ_adapt) .* sin(θ)) .+ μ_adapt
-    @views l_pdf = params.log_posterior(x[i,:])
-    L_star = l_pdf
+    @views L_star = params.log_posterior(x[i,:])
+    l_pdf = L_star
     if params.t_dist == true
         @views L_star -= dMvT(x[i,:], μ_adapt, Σ_chol_adapt, ph, params.ν, params.P)
     else
@@ -74,8 +74,8 @@ function AGESS_single_step!(x::AbstractMatrix{Y}, z::AbstractVector{Y}, params::
         ## Propose new angle
         θ = θ_min + rand(eltype(x)) * (θ_max - θ_min)
         @views x[i,:] .= ((x[i-1,:] - μ_adapt) .* cos(θ) .+  (z - μ_adapt) .* sin(θ)) .+ μ_adapt
-        @views l_pdf = params.log_posterior(x[i,:])
-        L_star = l_pdf
+        @views L_star = params.log_posterior(x[i,:])
+        l_pdf = L_star
         if params.t_dist == true
             @views L_star -= dMvT(x[i,:], μ_adapt, Σ_chol_adapt, ph, params.ν, params.P)
         else
@@ -125,8 +125,8 @@ function AGESS_single_step_1d!(x::AbstractMatrix{Y}, params::AGESS_MCMC_params,
 
         ## Propose initial first move
         x[i,j] = ((x[i-1,j] - μ_adapt[j]) * cos(θ) +  (z - μ_adapt[j]) * sin(θ)) + μ_adapt[j]
-        @views l_pdf = params.log_posterior(x[i,:])
-        L_star =  l_pdf
+        @views L_star = params.log_posterior(x[i,:])
+        l_pdf = L_star
         if params.t_dist == true
             L_star -= dMvT_1d(x[i,j], μ_adapt[j], Σ_chol_adapt[j,j], params.ν)
         else
@@ -151,8 +151,8 @@ function AGESS_single_step_1d!(x::AbstractMatrix{Y}, params::AGESS_MCMC_params,
             ## Propose new angle
             θ = θ_min + rand(eltype(x)) * (θ_max - θ_min)
             x[i,j] = ((x[i-1,j] - μ_adapt[j]) * cos(θ) +  (z - μ_adapt[j]) * sin(θ)) + μ_adapt[j]
-            @views l_pdf = params.log_posterior(x[i,:])
-            L_star =  l_pdf
+            @views L_star = params.log_posterior(x[i,:])
+            l_pdf = L_star
             if params.t_dist == true
                 L_star -= dMvT_1d(x[i,j], μ_adapt[j], Σ_chol_adapt[j,j], params.ν)
             else
@@ -210,7 +210,7 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
     @argcheck single_step_prop < 1.0
     
     ## Initialize MCMC iterations
-    x = ones(eltype(μ_0), n_MCMC, P)
+    x = zeros(eltype(μ_0), n_MCMC, P)
     x[1,:] .= init_x
     x[2,:] .= init_x
 
@@ -230,11 +230,11 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
 
     burnin_num = floor(typeof(n_MCMC), params.burnin * params.n_MCMC)
 
-    μ_adapt = copy(μ_0)
-    μ_adapt_ph = copy(μ_0)
+    μ_adapt = deepcopy(params.μ_0)
+    μ_adapt_ph = deepcopy(params.μ_0)
     ph = similar(μ_adapt)
 
-    Σ_chol = cholesky(Σ_0)
+    Σ_chol = cholesky(params.Σ_0)
     Σ_chol_adapt = deepcopy(Σ_chol)
     Σ_chol_adapt_ph = deepcopy(Σ_chol)
 
@@ -247,10 +247,10 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
 
     for i in 2:n_MCMC
         if P >= 10
-            if i < burnin_num * single_step_prop
+            if i < burnin_num * params.single_step_prop
                 l_pdf[i] = AGESS_single_step_1d!(x, params, μ_adapt, Σ_chol_adapt.L, i)
             else
-                if rand() > ϵ
+                if rand() > params.ϵ
                     l_pdf[i] = AGESS_single_step!(x, z, params, ph, μ_adapt, Σ_chol_adapt.L, i)
                 elseif rand() > 0.5
                     l_pdf[i] = AGESS_single_step_1d!(x, params, μ_adapt, Σ_chol_adapt.L, i)
@@ -259,7 +259,7 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
                 end
             end
         else
-            if rand() > ϵ
+            if rand() > params.ϵ
                 l_pdf[i] = AGESS_single_step!(x, z, params, ph, μ_adapt, Σ_chol_adapt.L, i)
             else
                 l_pdf[i] = AGESS_single_step!(x, z, params, ph, μ_0, Σ_chol.L, i)
