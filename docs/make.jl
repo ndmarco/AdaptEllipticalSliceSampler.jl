@@ -10,6 +10,7 @@ makedocs(
             "Banana" => "assets\\Banana.md",
             "Deep GP Surrogates" => "assets\\Deep_GP.md",
             "Regression" => "assets\\Regression.md",
+            "Constrained Inference" => "assets\\Constrained.md",
         ],
     ],
 )
@@ -17,6 +18,6 @@ makedocs(
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
-#=deploydocs(
-    repo = "<repository url>"
-)=#
+deploydocs(
+    repo = "github.com//ndmarco/AdaptEllipticalSliceSampler.jl.git",
+)
