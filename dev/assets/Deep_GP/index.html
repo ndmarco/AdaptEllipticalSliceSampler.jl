@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Deep GP Surrogates · AdaptEllipticalSliceSampler</title><script data-outdated-warner src="../warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../Banana/">AdaptEllipticalSliceSampler</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../Banana/">Banana</a></li><li class="is-active"><a class="tocitem" href>Deep GP Surrogates</a></li><li><a class="tocitem" href="../Regression/">Regression</a></li><li><a class="tocitem" href="../Constrained/">Constrained Inference</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Deep GP Surrogates</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Deep GP Surrogates</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/ndmarco/AdaptEllipticalSliceSampler.jl/blob/main/docs/src/assets/Deep_GP.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Deep-Gaussian-Process-Surrogate-Modeling"><a class="docs-heading-anchor" href="#Deep-Gaussian-Process-Surrogate-Modeling">Deep Gaussian Process Surrogate Modeling</a><a id="Deep-Gaussian-Process-Surrogate-Modeling-1"></a><a class="docs-heading-anchor-permalink" href="#Deep-Gaussian-Process-Surrogate-Modeling" title="Permalink"></a></h1><p>In many scientific domains, the use of complex computer simulations have become more prominent, especially in fields where data collection is challenging<sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup>. However, these high-fidelity computer simulations are often expensive to evaluate, restricting scientists to evaluate the complex computer simulation at a limited number of points in the (potentially high-dimensional) input space. The use of Gaussian Processes as surrogate models allows for predictive inference across the  input space given a limited set of evaluations; enabling scientists to use the model to inform the next evaluation of the complex computer simulation. Recently, the use of deep Gaussian processes<sup class="footnote-reference"><a id="citeref-2" href="#footnote-2">[2]</a></sup> has become a popular choice of surrogate models<sup class="footnote-reference"><a id="citeref-3" href="#footnote-3">[3]</a></sup> <sup class="footnote-reference"><a id="citeref-4" href="#footnote-4">[4]</a></sup> <sup class="footnote-reference"><a id="citeref-5" href="#footnote-5">[5]</a></sup> <sup class="footnote-reference"><a id="citeref-6" href="#footnote-6">[6]</a></sup>.</p><h3 id="Model-Specification"><a class="docs-heading-anchor" href="#Model-Specification">Model Specification</a><a id="Model-Specification-1"></a><a class="docs-heading-anchor-permalink" href="#Model-Specification" title="Permalink"></a></h3><p>Deep GPs provide a flexible non-stationary model using a hierarchical representation of multiple stationary Gaussian Processes. Here, we will focus on a two-layer deep GP. Let <span>$\mathbf{Y} \in \mathbb{R}^N$</span>  be the outputs of interest, and let <span>$\mathbf{X} \in \mathbb{R}^{N \times D}$</span> be the inputs.Our goal is to estimate the function <span>$f: \mathbb{R}^D \rightarrow \mathbb{R}$</span> where <span>$Y_i = f(\mathbf{x}_i)$</span>. Letting <span>$W(\mathbf{x})$</span>  <span>$(\mathbf{x} \in \mathbb{R}^D)$</span> be the augmented Gaussian process, with   <span>$\mathbf{W} := (W(\mathbf{x}_1), \dots, W(\mathbf{x}_N)) \in \mathbb{R}^N$</span>, we can specify the  deep GP surrogate model using the following hierarchical representation<sup class="footnote-reference"><a id="citeref-3" href="#footnote-3">[3]</a></sup>:</p><p class="math-container">\[\mathbf{Y} \sim \mathcal{N}\left(\mathbf{0}, \tau\left(K_{\theta_y}(\mathbf{X}) + g_y\mathbf{I}_N \right)\right),\]</p><p class="math-container">\[\mathbf{W}  \sim \mathcal{N}\left(\mathbf{0}, K_{\theta_w}(\mathbf{X}) + g_w \mathbf{I}_N\right),\]</p><p class="math-container">\[\tau \sim \text{Inv-Gamma}(\nu/2, \nu/2),\]</p><p>where <span>$K_{\theta_y}(\mathbf{x}_i, \mathbf{x}_j):= \exp\left( - \left[\sum_{d = 1}^D \frac{\left\lVert x_{id} - x_{jd}\right\rVert ^2}{\theta_{y_d}} +  \frac{\left\lVert W_{i} - W_{j}\right\rVert ^2}{\theta_{y_{D+1}}}\right]\right)$</span>, <span>$K_{\theta_y}(\mathbf{x}_i, \mathbf{x}_j):= \exp\left( - \sum_{d = 1}^D \frac{\left\lVert x_{id} - x_{jd}\right\rVert ^2}{\theta_{w_d}}\right)$</span>, and <span>$g_y, g_w \in \mathbb{R}_{+}$</span>. In this tutorial, we will consider the case where the following parameters are fixed (as is often done when the outputs of the complex computer simulations are deterministic): <span>$g_w = 10^{-8}$</span>, <span>$g_y  = 10^{-8}$</span>,  and <span>$\nu = 6$</span>.</p><h3 id="Simulating-the-Data"><a class="docs-heading-anchor" href="#Simulating-the-Data">Simulating the Data</a><a id="Simulating-the-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Simulating-the-Data" title="Permalink"></a></h3><p>We will consider the following one-dimensional function<sup class="footnote-reference"><a id="citeref-3" href="#footnote-3">[3]</a></sup>:</p><p class="math-container">\[f(x) = \sin(x) + 2\exp(-30x^2),\]</p><p>observed at <span>$N = 15$</span> uniformly evaluated points on <span>$\Omega = [-2.5,2.5]$</span>. We can generate the data using the following code.</p><pre><code class="language- hljs">import Random
+using AdaptEllipticalSliceSampler
+using Distributions
+using Plots
+using LinearAlgebra
+
+Random.seed!(123)
+
+function gen_data(N::T, min_eval::Y, max_eval::Y) where {Y&lt;:AbstractFloat, T&lt;:Integer}
+    X = collect(LinRange(min_eval, max_eval, N))
+    Y_N = sin.(X) .+ 2 * exp.(-30 * X.^2)
+    return X, Y_N
+end
+
+### Generate Data
+N_obs = 15
+X_N, Y_N = gen_data(N_obs, -2.5, 2.5)
+
+### Generate the truth
+time_points, Y_truth = gen_data(1000, -2.5, 2.5)
+
+### Plot observed data and true function
+### observed data
+p = plot(X_N, Y_N, seriestype=:scatter, color = &quot;red&quot;, label = &quot;Observed Data&quot;)
+### True function
+plot!(p, time_points, Y_truth, color = &quot;blue&quot;, label =&quot;Truth&quot;)</code></pre><h3 id="Specifying-the-Posterior-log-pdf"><a class="docs-heading-anchor" href="#Specifying-the-Posterior-log-pdf">Specifying the Posterior log pdf</a><a id="Specifying-the-Posterior-log-pdf-1"></a><a class="docs-heading-anchor-permalink" href="#Specifying-the-Posterior-log-pdf" title="Permalink"></a></h3><p>Using <code>AdaptEllitpicalSliceSampler.jl</code>, we essentially only need to specify a function that efficiently evaluates the posterior log pdf. Notice that we can integrate out the parameter <span>$\tau$</span>, leading to <span>$\mathbf{Y}$</span> being multivariate T distributed. We will start by constructing functions that generate <span>$K_{\theta_w}(\mathbf{X})$</span> and <span>$K_{\theta_y}(\mathbf{X})$</span>.</p><pre><code class="language-julia hljs">### Covariance matrix for W
+function construct_Kernel_Mat!(Σ::AbstractMatrix{Y}, X::AbstractVector{Y},
+                               θ::Y) where {Y&lt;:AbstractFloat}
+    for j in 1:size(Σ)[1],k in 1:size(Σ)[2]
+        Σ[j,k] = exp(-(((X[j] - X[k])^2) / θ))
+    end
+    Σ .= Symmetric(Σ)
+end
+
+### Covariance matrix for Y
+function construct_Kernel_Mat_y!(Σ::AbstractMatrix{Y}, X::AbstractVector{Y},
+                                 W::AbstractVector{Y}, θ_y_x::Y,
+                                 θ_y_w::Y) where {Y&lt;:AbstractFloat}
+    for j in 1:size(Σ)[1],k in 1:size(Σ)[2]
+        Σ[j,k] = -(((X[j] - X[k])^2) / θ_y_x)
+        Σ[j,k] -= (((W[j] - W[k])^2) / θ_y_w)
+    end
+    Σ .= exp.(Σ)
+    Σ .= Symmetric(Σ)
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">construct_Kernel_Mat_y! (generic function with 1 method)</code></pre><p>We can see that both of these functions take <span>$\Sigma$</span> as an input, ensuring that we are not needlessly  allocating memory. Using these functions, we can now specify the pdf of <span>$\mathbf{W}$</span> and <span>$\mathbf{Y}$</span>.</p><pre><code class="language-julia hljs">### Y is multivariate T distributed
+function likelihood_Y(W::AbstractVector{Y}, X::AbstractVector{Y}, Y_N::AbstractVector{Y},
+                      g::Y, θ_y_x::Y, θ_y_w::Y, ph::AbstractVector{Y},
+                      Σ::AbstractMatrix{Y}, ν_y::Y)::Float64 where {Y&lt;:AbstractFloat}
+    construct_Kernel_Mat_y!(Σ, X, W, θ_y_x, θ_y_w)
+    Σ[diagind(Σ)] .+=  g
+    cholesky!(Σ)
+    ph .= UpperTriangular(Σ)&#39; \ Y_N
+    lpdf =  -sum(log.(diag(Σ)))  - (0.5 * (ν_y + length(ph)) * log1p(dot(ph, ph) / ν_y))
+
+    return lpdf
+end
+
+### W is multivariate Gaussian distributed
+function likelihood_W(W::AbstractVector{Y}, X_N::AbstractVector{Y}, θ_w::Y, g::Y,
+                      ph::AbstractVector{Y},
+                      Σ::AbstractMatrix{Y})::Float64 where {Y&lt;:AbstractFloat}
+    construct_Kernel_Mat!(Σ, X_N, θ_w)
+    Σ[diagind(Σ)] .+= g
+    cholesky!(Σ)
+
+    ph .= UpperTriangular(Σ)&#39; \ W
+    lpdf = -sum(log.(diag(Σ)))  - 0.5 * dot(ph, ph)
+
+    return lpdf
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">likelihood_W (generic function with 1 method)</code></pre><p>Notice that in the evaluation of the likelihoods, we have &quot;place-holding&quot; variables <code>ph</code> which are used for intermediate calculations, allowing us to reallocate that memory for efficient computation. We will concatenate  all the parameters into one big vector of parameters,  <span>$\mathbf{p} = [\mathbf{W}, \theta_{y_1}, \theta_{y_{2}}, \theta_{w_1}]$</span>. We will transform the scale  parameters (<span>$\theta_{y_1}, \theta_{y_{2}}, \theta_{w_1}$</span>) using a log transformation to remove the positivity constraints (don&#39;t forget the Jacobian term when calculating the log pdfs).</p><pre><code class="language-julia hljs">function log_posterior(p::AbstractVector{Y}, X_N::AbstractVector{Y}, Y_N::AbstractVector{Y},
+                       Σ1::AbstractMatrix{Y}, Σ2::AbstractMatrix{Y}, ph1::AbstractVector{Y},
+                       ph2::AbstractVector{Y}, g_w::Y, g_y::Y, ν::Y,
+                       N_obs::T) where {Y&lt;:AbstractFloat, T&lt;:Integer}
+    lpdf = likelihood_Y(p[1:N_obs], X_N, Y_N, g_y, exp(p[N_obs+1]),
+                        exp(p[N_obs+2]), ph1, Σ1, ν)
+    lpdf += likelihood_W(p[1:N_obs], X_N, exp(p[N_obs+3]), g_w, ph2, Σ2)
+    ### prior on transformed theta_y_1
+    lpdf += logpdf(Gamma(1.0,2.0), exp(p[N_obs+1])) + p[N_obs+1]
+    ### prior on transformed theta_y_2
+    lpdf += logpdf(Gamma(1.0,2.0), exp(p[N_obs+2])) + p[N_obs+2]
+    ### prior on transformed theta_w_1
+    lpdf += logpdf(Gamma(1.0,2.0), exp(p[N_obs+3])) + p[N_obs+3]
+
+    return lpdf
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">log_posterior (generic function with 1 method)</code></pre><h3 id="Running-AGESS"><a class="docs-heading-anchor" href="#Running-AGESS">Running AGESS</a><a id="Running-AGESS-1"></a><a class="docs-heading-anchor-permalink" href="#Running-AGESS" title="Permalink"></a></h3><p>Now that we have specified a function to efficiently evaluate the posterior log pdf, we can  simply specify all of our pre-allocated variables and use the <code>AGESS</code> function. We will use the standard prior mean <span>$\boldsymbol{\mu}_0$</span> centered at <span>$\mathbf{0}$</span>, and prior variance  <span>$\boldsymbol{\Sigma}_0 = \mathbf{I}$</span>. When calling the function <code>AGESS</code>, we will specify an  anonymous function with <span>$\mathbf{p}$</span> as the only input to the function log_posterior, using the global parameter values for all the other variables. </p><pre><code class="language- hljs">### Specify pre-allocated variables
+ph1 = ones(N_obs)
+Σ1 = diagm(ones(N_obs))
+ph2 = ones(N_obs)
+Σ2 = diagm(ones(N_obs))
+
+### Specify constants
+ν = 6.0
+g_y = 1e-8 
+g_w = 1e-8
+
+### MCMC parameters
+P = N_obs + 3
+n_MCMC = 50000
+
+
+### Run Agess
+results = AGESS(p -&gt; log_posterior(p, X_N, Y_N, Σ1, Σ2, ph1, ph2, g_w, g_y, ν, N_obs), 
+                n_MCMC, P)</code></pre><p>We can plot the log pdf of the posterior at every iteration of the Markov chain to potentially detect convergence issues.</p><pre><code class="language- hljs">plot(results.l_pdf[1:n_MCMC], legend = false)</code></pre><h3 id="Posterior-Predictive-Distribution"><a class="docs-heading-anchor" href="#Posterior-Predictive-Distribution">Posterior Predictive Distribution</a><a id="Posterior-Predictive-Distribution-1"></a><a class="docs-heading-anchor-permalink" href="#Posterior-Predictive-Distribution" title="Permalink"></a></h3><p>Now that we have fit our model, we often wish to study the posterior predictive distribution;  allowing us to identify sections of the input space with high uncertainty and infer values at inputs not observed. Suppose that we want to evaluate the posterior predictive distribution at a set of new of inputs <span>$\mathbf{X^*}$</span>. We can do this by first sampling <span>$\mathbf{W}^*$</span> and then  sampling <span>$\mathbf{Y}^*$</span>. We know that <span>$W(\mathbf{x})$</span> is a Gaussian process, thus we have that</p><p class="math-container">\[\boldsymbol{\mu}_{\mathbf{W}^*}^{(i)} = K_{\theta_w^{(i)}}(\mathbf{X}^*, \mathbf{X})\left[K_{\theta_w^{(i)}}(\mathbf{X}) + \mathbf{I}g_w\right]^{-1} \mathbf{W}^{(i)},\]</p><p class="math-container">\[\boldsymbol{\Sigma}_{\mathbf{W}^*}^{(i)} = K_{\theta_w^{(i)}}(\mathbf{X}^*) + \mathbf{I}g_w - K_{\theta_w^{(i)}}(\mathbf{X}^*, \mathbf{X})\left[K_{\theta_w^{(i)}}(\mathbf{X}) + \mathbf{I}g_w\right]^{-1}K_{\theta_w^{(i)}}(\mathbf{X}, \mathbf{X}^*),\]</p><p>where the notation <span>$x^{(i)}$</span> denotes the <span>$i^{th}$</span> sample of <span>$x$</span> from our Markov chain. Thus we  can draw samples of <span>$(\mathbf{W}^*)^{(i)}$</span> from <span>$\mathcal{N}(\boldsymbol{\mu}_{\mathbf{W}^*}^{(i)}, \boldsymbol{\Sigma}_{\mathbf{W}^*}^{(i)})$</span>. Similarly, we can sample <span>$(\mathbf{Y}^*)^{(i)}$</span> conditionally on our sample of <span>$(\mathbf{W}^*)^{(i)}$</span> (i.e., using conditional multivariate T distributions). Below is a function that implements sampling from the posterior predictive distribution using the Markov chain constructed through the <code>AGESS</code> function. </p><pre><code class="language- hljs">### Function for generative samples from the posterior predictive distribution
+function predictive_draws(time_points::AbstractVector{Y}, W::AbstractMatrix{Y}, 
+                          θ_w::AbstractVector{Y}, θ_y_x::AbstractVector{Y}, 
+                          θ_y_w::AbstractVector{Y}, g::Y, g_x::Y, Y_N::AbstractVector{Y}, 
+                          X_N::AbstractVector{Y}, ν_y::Y;  burnin::Y=0.5, 
+                          thinning::T = 10) where {Y&lt;:AbstractFloat, T&lt;:Integer}
+    n_MCMC = size(W)[1]
+    burnin_num = floor(Int64, (burnin * n_MCMC))
+    P_out = length(time_points)
+    P = length(X_N)
+    steps = collect(range(burnin_num + 1, n_MCMC, step = thinning))
+    Y_out = zeros(length(steps), P_out)
+    W_out = zeros(P_out)
+    k_out_X_const = zeros(P_out, P)
+    k_out_X = zeros(P_out, P)
+    k_out_Y = zeros(P_out, P)
+    Σ = zeros(P,P)
+    ph = zeros(P_out, P)
+    ph1 = zeros(P)
+
+    μ_out = zeros(P_out)
+    Σ_out = zeros(P_out, P_out) 
+
+    for j in 1:P_out
+        for k in 1:P
+            k_out_X_const[j,k] = -(time_points[j] - X_N[k])^2
+        end
+    end
+
+    iter = 1
+    for i in steps
+        ## get distribution of W_out
+        k_out_X .= exp.(k_out_X_const ./ θ_w[i])
+        construct_Kernel_Mat!(Σ, X_N, θ_w[i])
+        Σ[diagind(Σ)] .+=  g_x
+        ph .= (Σ \ k_out_X&#39;)&#39;
+        @views μ_out .= ph * W[i,:]
+        construct_Kernel_Mat!(Σ_out, time_points, θ_w[i])
+        Σ_out .-= ph * k_out_X&#39;
+        Σ_out[diagind(Σ_out)] .+= g_x
+        Σ_out .= Hermitian(Σ_out)
+        cholesky!(Σ_out)
+
+        ## Generate sample of W_out
+        W_out .= UpperTriangular(Σ_out)&#39; * randn(P_out) 
+        W_out .+= μ_out
+
+        ## Generate sample of Y_out
+        for j in 1:P_out
+            for k in 1:P
+                k_out_Y[j,k] = exp(-(((W_out[j] - W[i,k])^2 / θ_y_w[i]) + 
+                                ((time_points[j] - X_N[k])^2 / θ_y_x[i])))
+            end
+        end
+
+
+        @views construct_Kernel_Mat_y!(Σ, X_N, W[i,:], θ_y_x[i], θ_y_w[i])
+        Σ[diagind(Σ)] .+=  g
+        ph .= (Σ \ k_out_Y&#39;)&#39;
+        μ_out .= ph * Y_N
+
+        cholesky!(Σ)
+        ph1 .= UpperTriangular(Σ)&#39; \ Y_N
+        construct_Kernel_Mat_y!(Σ_out, time_points, W_out, θ_y_x[i], θ_y_w[i])
+        Σ_out[diagind(Σ_out)] .+= g
+        Σ_out .-= ph * k_out_Y&#39;
+        Σ_out .= Hermitian(Σ_out)
+
+        d = dot(ph1, ph1)
+        Σ_out .*= (ν_y + d) / (ν_y + P)
+        cholesky!(Σ_out)
+
+        
+        Y_out[iter,:] .= UpperTriangular(Σ_out)&#39; * randn(P_out)
+        Y_out[iter,:] .*= 1 / sqrt(rand(Gamma((ν_y + P) / 2, 2 / (ν_y + P))))
+        Y_out[iter,:] .+= μ_out
+        iter = iter + 1
+    end
+
+    return Y_out
+end
+
+### Time points of interest
+time_points = collect(collect(LinRange(-2.5, 2.5, 500)))
+time_points = setdiff(time_points, X_N)
+
+### Run function (remember to transform your log-transformed variables back)
+Y_pred = predictive_draws(time_points, results.samps[:,1:N_obs], 
+                          exp.(results.samps[:,N_obs + 3]), 
+                          exp.(results.samps[:,N_obs + 1]), 
+                          exp.(results.samps[:,N_obs + 2]), g_y, 
+                          g_w, Y_N, X_N, ν, burnin = results.params.burnin)
+
+
+### Plot results
+p = plot(X_N, Y_N, seriestype=:scatter, color = &quot;black&quot;, label = &quot;Observed Data&quot;)
+P_out = length(time_points)
+
+### Get Credible intervals
+Upper_CI = zeros(P_out)
+Lower_CI = zeros(P_out)
+median_est = zeros(P_out)
+for i in 1:P_out
+    median_est[i] = median(Y_pred[:,i])
+    Lower_CI[i] = quantile(Y_pred[:,i], 0.025)
+    Upper_CI[i] = quantile(Y_pred[:,i], 0.975)
+end
+p = plot!(p, time_points, median_est, color = &quot;blue&quot;, label =&quot;Posterior Median&quot;)
+truth = sin.(time_points) .+ 2 * exp.(-30 * time_points.^2)
+p = plot!(p, time_points, truth, color = &quot;red&quot;, label =&quot;Truth&quot;)
+plot!(p, time_points, Lower_CI, fillrange = Upper_CI, fillalpha = 0.3, alpha = 0.3, 
+      label = &quot;95% CI&quot;)</code></pre><h3 id="Conclusion"><a class="docs-heading-anchor" href="#Conclusion">Conclusion</a><a id="Conclusion-1"></a><a class="docs-heading-anchor-permalink" href="#Conclusion" title="Permalink"></a></h3><p>Deep Gp models are highly flexible models, that can lead to multimodal posterior distributions. Adaptive generalized elliptical slice sampling<sup class="footnote-reference"><a id="citeref-7" href="#footnote-7">[7]</a></sup> offers an efficient and reliable sampling method for conducting inference in these settings. For a detailed comparison between AGESS and other sampling schemes, please refer to the main manuscript<sup class="footnote-reference"><a id="citeref-7" href="#footnote-7">[7]</a></sup>.</p><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a>R. B. Gramacy. Surrogates: Gaussian process modeling, design, and optimization for the applied sciences. Chapman and Hall/CRC, 2020.</li><li class="footnote" id="footnote-2"><a class="tag is-link" href="#citeref-2">2</a>A. Damianou and N. D. Lawrence. Deep gaussian processes. In Artificial intelligence and statistics, pages 207–215. PMLR, 2013.</li><li class="footnote" id="footnote-3"><a class="tag is-link" href="#citeref-3">3</a>S. Montagna and S. T. Tokdar. Computer emulation with nonstationary gaussian processes. SIAM/ASA Journal on Uncertainty Quantification, 4(1):26–47, 2016.</li><li class="footnote" id="footnote-4"><a class="tag is-link" href="#citeref-4">4</a>M. I. Radaideh and T. Kozlowski. Surrogate modeling of advanced computer simulations using deep gaussian processes. Reliability Engineering &amp; System Safety, 195:106731, 2020.</li><li class="footnote" id="footnote-5"><a class="tag is-link" href="#citeref-5">5</a>A. Sauer, A. Cooper, and R. B. Gramacy. Non-stationary gaussian process surrogates. arXiv preprint arXiv:2305.19242, 2023.</li><li class="footnote" id="footnote-6"><a class="tag is-link" href="#citeref-6">6</a>A. Sauer, R. B. Gramacy, and D. Higdon. Active learning for deep gaussian process surrogates. Technometrics, 65(1):4–18, 2023.</li><li class="footnote" id="footnote-7"><a class="tag is-link" href="#citeref-7">7</a>N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling</li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Banana/">« Banana</a><a class="docs-footer-nextpage" href="../Regression/">Regression »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Thursday 5 March 2026 01:44">Thursday 5 March 2026</span>. Using Julia version 1.12.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>

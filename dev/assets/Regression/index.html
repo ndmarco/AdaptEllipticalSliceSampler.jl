@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Regression · AdaptEllipticalSliceSampler</title><script data-outdated-warner src="../warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../Banana/">AdaptEllipticalSliceSampler</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../Banana/">Banana</a></li><li><a class="tocitem" href="../Deep_GP/">Deep GP Surrogates</a></li><li class="is-active"><a class="tocitem" href>Regression</a><ul class="internal"><li><a class="tocitem" href="#Bayesian-Linear-Regression"><span>Bayesian Linear Regression</span></a></li><li><a class="tocitem" href="#High-Dimensional-Sparse-Linear-Regression"><span>High-Dimensional Sparse Linear Regression</span></a></li><li><a class="tocitem" href="#Generalize-ReLU-Regression"><span>Generalize ReLU Regression</span></a></li><li><a class="tocitem" href="#Conclusion"><span>Conclusion</span></a></li></ul></li><li><a class="tocitem" href="../Constrained/">Constrained Inference</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Regression</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Regression</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/ndmarco/AdaptEllipticalSliceSampler.jl/blob/main/docs/src/assets/Regression.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Regression"><a class="docs-heading-anchor" href="#Regression">Regression</a><a id="Regression-1"></a><a class="docs-heading-anchor-permalink" href="#Regression" title="Permalink"></a></h1><p>In this tutorial, we will illustrate how to use the <code>AdaptEllitpicalSliceSampler.jl</code> package, to perform Bayesian computation using the adaptive generalized elliptical slice sampler<sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup> in  regression settings. We consider three settings in this tutorial: (1) Bayesian linear regression, (2) high-dimensional linear sparse regression<sup class="footnote-reference"><a id="citeref-2" href="#footnote-2">[2]</a></sup> <sup class="footnote-reference"><a id="citeref-3" href="#footnote-3">[3]</a></sup>, and (3) generalized ReLU regression.</p><h2 id="Bayesian-Linear-Regression"><a class="docs-heading-anchor" href="#Bayesian-Linear-Regression">Bayesian Linear Regression</a><a id="Bayesian-Linear-Regression-1"></a><a class="docs-heading-anchor-permalink" href="#Bayesian-Linear-Regression" title="Permalink"></a></h2><p>In this section, we consider using AGESS in the context of standard Bayesian linear regression. Letting <span>$\mathbf{Y} \in \mathbb{R}^N$</span> be the response variable and <span>$\mathbf{X} \in \mathbb{R}^{N \times D}$</span> be the set of covariates, we can specify our model as follows:</p><p class="math-container">\[Y_i \sim \mathcal{N}(\mathbf{x}_i&#39; \boldsymbol{\beta}, \sigma^2),\]</p><p class="math-container">\[\boldsymbol{\beta} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}),\]</p><p class="math-container">\[\sigma^2 \sim \text{Inv-Gamma}(1,1).\]</p><p>Let&#39;s start by first generating data from our model.</p><pre><code class="language- hljs">import Random
+import LogExpFunctions
+using AdaptEllipticalSliceSampler
+using Distributions
+using Plots
+using LinearAlgebra
+
+Random.seed!(123)
+
+function generate_data(N::T, D::T) where {T&lt;:Integer}
+    β = randn(D) * (2 * log(D))^(1.0 / 4)
+    x = randn(N, D)
+    y = zeros(Float64, N)
+    for i in 1:N
+        y[i] = randn() * 0.5 + dot(x[i,:], β)
+    end
+
+    return β, x, y
+end
+
+### Generate data with 1000 observations and 10 covariates
+D = 10
+β, X, y = generate_data(1000, D)</code></pre><p>We can see that we generated the data from our model under <span>$\sigma = 0.5$</span> (<span>$N = 1000$</span>, <span>$D = 10$</span>).  Next, we can write a function that calculates the posterior log pdf. When conducting inference  on variables that have positive support (i.e., <span>$\sigma^2 &gt; 0$</span>), it is often useful to transform the variables to remove these constraints. Thus, we will transform <span>$\sigma^2$</span> using a log  transformation to remove the positivity constraints (don&#39;t forget the Jacobian term  when calculating the log pdfs). Additionally, we will concatenate all of our variables into  one vector <span>$\text{Param} = [\boldsymbol{\beta}, \log(\sigma^2)]$</span>.</p><pre><code class="language-julia hljs">function log_posterior(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
+                       y::AbstractVector{Y}) where {Y&lt;: AbstractFloat}
+    P = length(Param)
+    ## Normal Likelihood
+    lpdf = -0.5 * (1 / exp(Param[P])) *  norm(X * Param[1:P-1] - y)^2 -
+            (0.5 * length(y) * Param[P])
+
+    ## Priors
+    ## Std Normal prior on coefficients
+    lpdf += -0.5 * norm(Param[1:P-1])^2
+
+    ## IG(1,1) prior on scale parameter (log-transformed)
+    lpdf += -1 * Param[P]  -  (1 / exp(Param[P]))
+
+    return lpdf
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">log_posterior (generic function with 1 method)</code></pre><p>Now that we have specified a function to efficiently evaluate the posterior log pdf, we can simply use the <code>AGESS</code> function to draw samples from the posterior distribution. When calling the  function <code>AGESS</code>, we will specify an anonymous function with <span>$\text{Param}$</span> as the only input  to the function <code>log_posterior</code>, using the global parameter values for <span>$\mathbf{X}$</span> and <span>$\mathbf{Y}$</span>. </p><pre><code class="language- hljs">### Specify the dimension of the target distribution
+P = D + 1
+### Specify the number of MCMC iterations
+n_MCMC = 10000
+
+### Run AGESS
+results = AGESS(Param -&gt; log_posterior(Param, X, y), n_MCMC, P)</code></pre><p>We can visualize some of the trace plots of the <span>$\beta$</span> parameters using the output of <code>AGESS</code>.</p><pre><code class="language- hljs">### Plot trace plot
+plot(results.samps[2501:n_MCMC, findall(β .&gt; 0)])
+### Plot true values
+hline!(β[findall(β .&gt; 0)])</code></pre><p>Similarly, we can view the trace plot of <span>$\sigma^2$</span>.</p><pre><code class="language- hljs">### Plot trace plot, don&#39;t forget to transform the transformed variables back
+plot(exp.(results.samps[2501:n_MCMC, D+1]))
+### Plot true value
+hline!([0.25])</code></pre><p>Lastly, we can plot the log pdf of the posterior at every iteration of the Markov chain to potentially detect convergence issues.</p><pre><code class="language- hljs">plot(results.l_pdf[1:n_MCMC], legend = false)</code></pre><h2 id="High-Dimensional-Sparse-Linear-Regression"><a class="docs-heading-anchor" href="#High-Dimensional-Sparse-Linear-Regression">High-Dimensional Sparse Linear Regression</a><a id="High-Dimensional-Sparse-Linear-Regression-1"></a><a class="docs-heading-anchor-permalink" href="#High-Dimensional-Sparse-Linear-Regression" title="Permalink"></a></h2><p>In many modern applications, the number of covariates may be larger than the sample size (<span>$N &lt; D$</span>), often requiring regularization in order to achieve good predictive properties. Here we consider the sparse regression setting, where sparsity is induced via continuous shrinkage through global-local  shrinkage priors. Here, we consider the horseshoe prior<sup class="footnote-reference"><a id="citeref-2" href="#footnote-2">[2]</a></sup> <sup class="footnote-reference"><a id="citeref-3" href="#footnote-3">[3]</a></sup>. Specifically, we consider the following model:</p><p class="math-container">\[Y_i \sim \mathcal{N}(\mathbf{x}_i&#39;\boldsymbol{\beta}, \sigma^2)\]</p><p class="math-container">\[\beta_j \sim \mathcal{N}(0, \sigma^2\tau^2\lambda_j^2)  \;\;\;\;\; p(\sigma^2) \propto \frac{1}{\sigma^2},\]</p><p class="math-container">\[\tau \sim C^+(0,1) \;\;\;\;\; \lambda_j \sim C^+(0,1),\]</p><p>for <span>$i = 1, \dots, N$</span> and <span>$j = 1, \dots, D$</span>, where <span>$C^+$</span> denotes the half-Cauchy distribution.  We will first start by generating data, where the design matrix has correlated covariates. We will consider the case where we have 25 observations and 25 covariates. Here we will generate a dataset where the probability of <span>$\beta_j = 0$</span> is <span>$0.9$</span> (<span>$1 \le j \le 25$</span>). </p><pre><code class="language- hljs">function gen_data_AR1(N::T, P::T; sparsity::Y = 0.8, ρ::Y = 0.2, 
+                      σ_sq::Y = 1.0) where {Y&lt;:AbstractFloat, T&lt;:Integer}
+    Σ = ones(P, P) 
+    for i in 1:P
+      for j in 1:P
+        Σ[i,j] = ρ^(abs(i - j))
+      end
+    end
+    Σ[diagind(Σ)] .= 1
+    X = zeros(N, P)
+    X .= rand(MultivariateNormal(zeros(P), Σ), N)&#39;
+    β = zeros(P)
+    for i in 1:P
+        if rand(Bernoulli(1 - sparsity)) == 1
+          β[i] = (rand() * 3 + 1) * (-1)^i
+        end
+    end
+    if sum(β) == 0
+      β[1] = (rand() * 3 + 1) * (-1)^i
+    end
+
+    Y_obs = rand(MultivariateNormal(X * β, σ_sq * diagm(ones(N))))
+
+    return X, Y_obs, β
+end
+
+N = 25
+D = 25
+
+X, Y, β = gen_data_AR1(N, D, ρ = 0.8, sparsity = 0.9, σ_sq = 1.0)</code></pre><p>We visualize the correlation structure of the design matrix.</p><pre><code class="language- hljs">heatmap(cor(X))</code></pre><p>We can also view the values of <span>$\boldsymbol{\beta}$</span>.</p><pre><code class="language- hljs">scatter(β,legend = false)</code></pre><h3 id="Specification-of-the-Posterior-log-pdf"><a class="docs-heading-anchor" href="#Specification-of-the-Posterior-log-pdf">Specification of the Posterior log pdf</a><a id="Specification-of-the-Posterior-log-pdf-1"></a><a class="docs-heading-anchor-permalink" href="#Specification-of-the-Posterior-log-pdf" title="Permalink"></a></h3><p>When using the <code>AdaptEllitpicalSliceSampler.jl</code>, it is crucial that we construct a function that can efficiently evaluate the posterior log pdf. We will first start by constructing two functions that evaluate the priors on <span>$\boldsymbol{\beta}$</span> and <span>$\boldsymbol{\lambda}$</span>. Since <span>$\lambda_j$</span> has positive support, we will take a log transformation of the <span>$\lambda_j$</span> parameters (<span>$j = 1, \dots, D$</span>). Similarly, we will take a log transformation of <span>$\tau$</span> and <span>$\sigma$</span>.</p><pre><code class="language-julia hljs">function prior_β(β::AbstractVector{Y}, τ::Y, λ::AbstractVector{Y},
+                 σ::Y) where {Y&lt;:AbstractFloat}
+  lpdf::Float64 = 0.0
+  for i in eachindex(β)
+      @views lpdf += logpdf(Normal(0.0, exp(σ) * exp(τ) * exp(λ[i])), β[i])
+  end
+  return lpdf
+end
+
+function prior_λ(λ::AbstractVector{Y}) where {Y&lt;:AbstractFloat}
+  lpdf::Float64 = 0.0
+  cauchy_d = Cauchy(0.0,1.0)
+  for i in eachindex(λ)
+      @views lpdf += logpdf(cauchy_d, exp(λ[i])) + λ[i]
+  end
+  return lpdf
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">prior_λ (generic function with 1 method)</code></pre><p>Using these two functions, we can specify a function evaluating the log pdf of the target distribution of interest. We will concatenate all the parameters into one vector <span>$\text{Param} = [\boldsymbol{\beta}, \log(\boldsymbol{\lambda}), \log(\tau), \log(\sigma)]$</span>.</p><pre><code class="language-julia hljs">function log_posterior_HD(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
+                          y::AbstractVector{Y}, D::T) where {Y&lt;:AbstractFloat, T&lt;:Integer}
+  lpdf::Float64 = 0.0
+  ## Likelihood
+  for i in eachindex(y)
+    @views lpdf += logpdf(Normal(dot(X[i,:], Param[1:D]), exp(Param[2*D + 2])), y[i])
+  end
+  ## Prior
+  lpdf += prior_β(Param[1:D], Param[2*D + 1], Param[(D + 1):2*D], Param[2*D + 2]) +
+            prior_λ(Param[(D + 1):2*D]) + logpdf(Cauchy(0.0,1.0), exp(Param[2*D + 1])) + Param[2*D + 1]
+
+  return lpdf
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">log_posterior_HD (generic function with 1 method)</code></pre><h3 id="Running-AGESS"><a class="docs-heading-anchor" href="#Running-AGESS">Running AGESS</a><a id="Running-AGESS-1"></a><a class="docs-heading-anchor-permalink" href="#Running-AGESS" title="Permalink"></a></h3><p>Now that we have specified a function to efficiently evaluate the posterior log pdf, we can  use the <code>AGESS</code> function to generate samples from the posterior distribution. Similarly to before,  we will specify an anonymous function with <span>$\text{Param}$</span> as the only input to the function  <code>log_posterior_HD</code>, using the global parameter values for <span>$\mathbf{X}$</span>, <span>$\mathbf{y}$</span>, and <span>$D$</span>.</p><pre><code class="language- hljs">### Specify the dimension of the target distribution
+P = 2*D + 2
+### Specify the number of MCMC iterations
+n_MCMC = 100000
+
+### Run AGESS
+results = AGESS(Param -&gt; log_posterior_HD(Param, X, Y, D), n_MCMC, P)</code></pre><p>After running <code>AGESS</code>, we can view the trace plots of the non-zero coefficients.</p><pre><code class="language- hljs">plot(results.samps[25001:10:end, findall(β .!= 0)], legend = false)
+hline!(β[findall(β .!= 0)], line = :dash, color =:black)</code></pre><p>We can also view the trace plots of the coefficients that are equal to zero.</p><pre><code class="language- hljs">plot(results.samps[25001:10:end, findall(β .== 0)], legend = false)
+hline!(β[findall(β .== 0)], line = :dash, color =:black)</code></pre><p>Next we will view the trace plot of <span>$\sigma^2$</span>.</p><pre><code class="language- hljs">plot(exp.(results.samps[25001:10:end, 2*D + 2]).^2, legend = false)
+hline!([1], line = :dash, color =:black)</code></pre><p>Lastly, we can plot the log pdf of the posterior at every iteration of the Markov chain to potentially detect convergence issues.</p><pre><code class="language- hljs">plot(results.l_pdf[1:n_MCMC], legend = false)</code></pre><h2 id="Generalize-ReLU-Regression"><a class="docs-heading-anchor" href="#Generalize-ReLU-Regression">Generalize ReLU Regression</a><a id="Generalize-ReLU-Regression-1"></a><a class="docs-heading-anchor-permalink" href="#Generalize-ReLU-Regression" title="Permalink"></a></h2><p>As discussed in the main manuscript<sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup>, AGESS can handle non-differentiable target functions. In this section of the tutorial, we consider a generalized regression setting where the posterior distribution is not differentiable everywhere. Therefore, alternative samplers such as HMC<sup class="footnote-reference"><a id="citeref-4" href="#footnote-4">[4]</a></sup>  are not suitable for these types of target distributions. Let <span>$\mathbf{Y} \in \mathbb{R}^N$</span> be the response variable and <span>$\mathbf{X} \in \mathbb{R}^{N \times D}$</span> be the covariates of interest. Consider the following model, inspired by density discontinuity modeling<sup class="footnote-reference"><a id="citeref-5" href="#footnote-5">[5]</a></sup>:</p><p class="math-container">\[Y_i \sim Bernoulli(\Phi(\mu_i)) \;\;\;\;\;\Phi(z) = \frac{e^z}{1 + e^z} \;\;\;\;\; \mu_i = \max(0, \mathbf{x}_i&#39;\boldsymbol{\beta}),\]</p><p>for <span>$i = 1, \dots, N$</span>, where <span>$\boldsymbol{\beta} \sim \mathcal{N}_{D}(\mathbf{0}, \mathbf{I})$</span>. We will first start by specifying a function to generate data from our model. We will consider the simple case of when <span>$D = 2$</span>, allowing for easy visualization of the target distribution.</p><pre><code class="language- hljs">function generate_data(N::T, P::T, ν::Y = 6.0) where {Y&lt;:AbstractFloat, T&lt;:Integer}
+    β = randn(P) * (2 * log(P))^(1.0 / 4)
+    β .*= sqrt(rand(Gamma(ν/2, 2/ ν)))
+    x::Matrix{typeof(ν)} = randn(N, P) .+ randn() * 0.5
+    μ = zeros(N)
+    y::Vector{typeof(N)} = zeros(Int64, N)
+
+    for i in 1:N
+        μ[i] = max(0, dot(x[i,:], β))
+        y[i] = rand(Binomial(1, LogExpFunctions.logistic(μ[i])), 1)[1]
+    end
+
+
+    return β, x, μ, y
+end
+
+D = 2
+N = 1000
+β, x, μ, y = generate_data(N, D)</code></pre><h3 id="Specification-of-the-Posterior-log-pdf-2"><a class="docs-heading-anchor" href="#Specification-of-the-Posterior-log-pdf-2">Specification of the Posterior log pdf</a><a class="docs-heading-anchor-permalink" href="#Specification-of-the-Posterior-log-pdf-2" title="Permalink"></a></h3><p>Now that we have generated the data, we can construct a function which evaluates the posterior  log pdf. As in the previous sections, it is important that we specify a function that is efficiently implemented. We will first start by constructing a function that evaluates the log likelihood, and then a function that evaluates the posterior log pdf.</p><pre><code class="language-julia hljs">function log_likelihood(β::AbstractVector{Y}, x::Matrix{Y},
+                        y::Vector{T}) where {Y &lt;:AbstractFloat, T&lt;:Integer}
+    log_lik::Float64 = 0.0
+    z::Float64 = 0.0
+    for i in eachindex(y)
+        @views z = dot(x[i,:], β)
+        if z &lt; 0.0
+            z = 0.0
+        end
+        log_lik -= log1p(exp(-(sign(y[i] - 0.5) * z)))
+    end
+
+    return log_lik
+end
+
+function log_posterior_ReLU(β::AbstractVector{Y}, x::Matrix{Y},
+                            y::Vector{T}) where {Y &lt;:AbstractFloat, T&lt;:Integer}
+    log_lik::Float64 = log_likelihood(β, x, y) - 0.5 * dot(β, β)
+    return log_lik
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">log_posterior_ReLU (generic function with 1 method)</code></pre><h3 id="Running-AGESS-2"><a class="docs-heading-anchor" href="#Running-AGESS-2">Running AGESS</a><a class="docs-heading-anchor-permalink" href="#Running-AGESS-2" title="Permalink"></a></h3><p>Now that we have specified a function to efficiently evaluate the posterior log pdf, we can  use the <code>AGESS</code> function to generate samples from the posterior distribution.</p><pre><code class="language- hljs">### Specify the dimension of the target distribution
+P = D
+### Specify the number of MCMC iterations
+n_MCMC = 10000
+
+### Run AGESS
+results = AGESS(β -&gt; log_posterior_ReLU(β, x, y), n_MCMC, P)</code></pre><p>Using the output of <code>AGESS</code>, we can visualize the samples from the target distribution.</p><pre><code class="language- hljs"># Discard the initial 2500 samples to burnin
+scatter(results.samps[2501:10000, 1], results.samps[2501:10000, 2], alpha = 0.1, 
+        legend = false)
+scatter!([β[1]], [β[2]], color = &quot;red&quot;)</code></pre><p>Additionally, we can plot the log pdf of the posterior at every iteration of the Markov chain to potentially detect convergence issues.</p><pre><code class="language- hljs">plot(results.l_pdf[1:n_MCMC], legend = false)</code></pre><h2 id="Conclusion"><a class="docs-heading-anchor" href="#Conclusion">Conclusion</a><a id="Conclusion-1"></a><a class="docs-heading-anchor-permalink" href="#Conclusion" title="Permalink"></a></h2><p>Adaptive generalized elliptical slice sampling<sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup> can be utilized in many generalized regression settings,  including target distributions that are non-differentiable. While limited  by computational resources in this tutorial, AGESS can be used to sample from relatively  high-dimensional target distributions. Comparisons between AGESS and alternative samplers can  be found in the main manuscript<sup class="footnote-reference"><a id="citeref-1" href="#footnote-1">[1]</a></sup>.</p><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a>N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling</li><li class="footnote" id="footnote-2"><a class="tag is-link" href="#citeref-2">2</a>C. M. Carvalho, N. G. Polson, and J. G. Scott. Handling sparsity via the horseshoe. In Artificial intelligence and statistics, pages 73–80. PMLR, 2009.</li><li class="footnote" id="footnote-3"><a class="tag is-link" href="#citeref-3">3</a>C. M. Carvalho, N. G. Polson, and J. G. Scott. The horseshoe estimator for sparse signals. Biometrika, pages 465–480, 2010.</li><li class="footnote" id="footnote-4"><a class="tag is-link" href="#citeref-4">4</a>M. Betancourt. A conceptual introduction to hamiltonian monte carlo. arXiv preprint arXiv:1701.02434, 2017.</li><li class="footnote" id="footnote-5"><a class="tag is-link" href="#citeref-5">5</a>S. T. Tokdar, R. Sen, H. Zheng, and S. Zhang. Density discontinuity regression. arXiv preprint arXiv:2507.05581, 2025.</li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Deep_GP/">« Deep GP Surrogates</a><a class="docs-footer-nextpage" href="../Constrained/">Constrained Inference »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Thursday 5 March 2026 01:44">Thursday 5 March 2026</span>. Using Julia version 1.12.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
