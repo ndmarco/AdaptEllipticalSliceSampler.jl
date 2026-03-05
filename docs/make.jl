@@ -8,6 +8,8 @@ makedocs(
     pages = [
         "Tutorials" => [
             "Banana" => "assets\\Banana.md",
+            "Deep GP Surrogates" => "assets\\Deep_GP.md",
+            "Regression" => "assets\\Regression.md",
         ],
     ],
 )
