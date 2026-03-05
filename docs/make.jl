@@ -7,10 +7,10 @@ makedocs(
     modules = [AdaptEllipticalSliceSampler],
     pages = [
         "Tutorials" => [
-            "Banana" => "assets\\Banana.md",
-            "Deep GP Surrogates" => "assets\\Deep_GP.md",
-            "Regression" => "assets\\Regression.md",
-            "Constrained Inference" => "assets\\Constrained.md",
+            "Banana" => "assets/Banana.md",
+            "Deep GP Surrogates" => "assets/Deep_GP.md",
+            "Regression" => "assets/Regression.md",
+            "Constrained Inference" => "assets/Constrained.md",
         ],
     ],
 )
