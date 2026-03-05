@@ -348,7 +348,7 @@ n_MCMC = 10000
 results = AGESS(β -> log_posterior_ReLU(β, x, y), n_MCMC, P)
 ```
 
-Using the output of `AGESS`, we can visualize the distribution of the target distribution.
+Using the output of `AGESS`, we can visualize the samples from the target distribution.
 
 ```@example Regression
 # Discard the initial 2500 samples to burnin
