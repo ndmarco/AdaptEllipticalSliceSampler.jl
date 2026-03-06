@@ -107,10 +107,12 @@ to use for-loops as we please! (Unlike R)
 
 ```@example Perf
 function lm_log_posterior_3(Param::AbstractVector{Y}, X::AbstractMatrix{Y}, 
-                            y::AbstractVector{Y}) where {Y<: AbstractFloat}
+                            y::AbstractVector{Y}, ph::AbstractVector{Y}) where {Y<: AbstractFloat}
     P = length(Param)
     ## Normal Likelihood
-    @views lpdf = -0.5 * (1 / exp(Param[P])) *  norm(X * Param[1:P-1] - y)^2 - 
+    @views ph .= X * Param[1:P-1]
+    ph .-= y
+    lpdf = -0.5 * (1 / exp(Param[P])) *  norm(ph)^2 - 
             (0.5 * length(y) * Param[P])
 
     ## Priors
@@ -123,7 +125,8 @@ function lm_log_posterior_3(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
     return lpdf
 end
 
-@benchmark lm_log_posterior_3($Param, $X, $y)
+ph = zeros(1000)
+@benchmark lm_log_posterior_3($Param, $X, $y, $ph)
 ```
 
 We can see that we have a 1000-fold speed-up by just efficiently evaluating the posterior log
