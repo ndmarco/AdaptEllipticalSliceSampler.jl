@@ -363,12 +363,12 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
 
     for i in 2:n_MCMC
         if P >= 10
-            if i < burnin_num * params.single_step_prop
+            if i < (burnin_num * params.single_step_prop)
                 l_pdf[i] = AGESS_single_step_1d!(x, params, μ_adapt, Σ_chol_adapt.L, i)
             else
-                if rand() > params.ϵ + params.single_step_prop
+                if rand() > (params.ϵ + params.single_step_prop)
                     l_pdf[i] = AGESS_single_step!(x, z, params, ph, μ_adapt, Σ_chol_adapt.L, i)
-                elseif rand() > (params.single_step_prop / params.ϵ + params.single_step_prop)
+                elseif rand() > (params.single_step_prop / (params.ϵ + params.single_step_prop))
                     l_pdf[i] = AGESS_single_step_1d!(x, params, μ_adapt, Σ_chol_adapt.L, i)
                 else
                     l_pdf[i] = AGESS_single_step!(x, z, params, ph, μ_0, Σ_chol.L, i)

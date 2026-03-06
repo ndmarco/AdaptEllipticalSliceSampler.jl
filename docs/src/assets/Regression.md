@@ -148,7 +148,7 @@ function gen_data_AR1(N::T, P::T; sparsity::Y = 0.8, ρ::Y = 0.2,
         end
     end
     if sum(β) == 0
-      β[1] = (rand() * 3 + 1) * (-1)^i
+      β[1] = (rand() * 3 + 1) * (-1)^1
     end
 
     Y_obs = rand(MultivariateNormal(X * β, σ_sq * diagm(ones(N))))
