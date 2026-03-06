@@ -8,7 +8,7 @@ constrained inference linear regression problem[^2]:
 
 $$p(\boldsymbol{\beta} \mid \mathbf{y}) \propto \exp(-0.5 \lVert \mathbf{y} - \mathbf{X}\boldsymbol{\beta}\rVert^2_2) \mathbb{1}_{\{\boldsymbol{\beta}: \lVert \boldsymbol{\beta} \rVert^2_2 < 1\}}(\boldsymbol{\beta}).$$
 
-Thus, we can see that the support is constrained to the interior of the unit ball, an open set. 
+Thus, we can see that the support is constrained to the interior of the unit ball -- an open set. 
 We will start by generating data from an unconstrained linear regression framework, with $\boldsymbol{\beta}$
 outside the set of interest.
 
@@ -40,7 +40,7 @@ this implementation is sufficient for this demonstration.**
 function log_posterior(β::AbstractVector{Y}, X::AbstractMatrix{Y}, 
                        y::AbstractVector{Y}) where {Y <: AbstractFloat}
     l_lpdf::Float64 = -Inf
-    # incorporate constraint
+    ### Incorporate constraint
     if norm(β) < 1
         l_lpdf = -0.5 * norm(y - X * β)^2
     end

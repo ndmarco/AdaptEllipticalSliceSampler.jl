@@ -2,7 +2,7 @@ module AdaptEllipticalSliceSampler
 
 using LinearAlgebra, Random, Distributions, ProgressMeter, ArgCheck
 
-export AGESS
+export AGESS, AGESS_MCMC_params, AGESS_single_step!, AGESS_single_step_1d!
 
 include("AGESS.jl")
 include("EllipticalDistributions.jl")
