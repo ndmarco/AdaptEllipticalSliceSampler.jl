@@ -9,6 +9,7 @@ makedocs(
         "Introduction" => "index.md",
         "Installation" => "assets/install.md",
         "Documentation" => "assets/Documentation.md",
+        "Performance Tips" => "assets/Performance.md",
         "Tutorials" => [
             "Banana" => "assets/Banana.md",
             "Deep GP Surrogates" => "assets/Deep_GP.md",

@@ -1,6 +1,6 @@
 # Regression
 
-In this tutorial, we will illustrate how to use the `AdaptEllitpicalSliceSampler.jl` package, to
+In this tutorial, we will illustrate how to use the `AdaptEllipticalSliceSampler.jl` package, to
 perform Bayesian computation using the adaptive generalized elliptical slice sampler[^1] in 
 regression settings. We consider three settings in this tutorial: (1) Bayesian linear regression,
 (2) high-dimensional linear sparse regression[^2] [^3], and (3) generalized ReLU regression.
@@ -56,12 +56,12 @@ function log_posterior(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
                        y::AbstractVector{Y}) where {Y<: AbstractFloat}
     P = length(Param)
     ## Normal Likelihood
-    lpdf = -0.5 * (1 / exp(Param[P])) *  norm(X * Param[1:P-1] - y)^2 - 
+    @views lpdf = -0.5 * (1 / exp(Param[P])) *  norm(X * Param[1:P-1] - y)^2 - 
             (0.5 * length(y) * Param[P])
 
     ## Priors
     ## Std Normal prior on coefficients
-    lpdf += -0.5 * norm(Param[1:P-1])^2
+    @views lpdf += -0.5 * norm(Param[1:P-1])^2
 
     ## IG(1,1) prior on scale parameter (log-transformed)
     lpdf += -1 * Param[P]  -  (1 / exp(Param[P]))
@@ -176,7 +176,7 @@ scatter(β,legend = false)
 
 ### Specification of the Posterior log pdf
 
-When using the `AdaptEllitpicalSliceSampler.jl`, it is crucial that we construct a function
+When using the `AdaptEllipticalSliceSampler.jl`, it is crucial that we construct a function
 that can efficiently evaluate the posterior log pdf. We will first start by constructing two
 functions that evaluate the priors on $\boldsymbol{\beta}$ and $\boldsymbol{\lambda}$. Since
 $\lambda_j$ has positive support, we will take a log transformation of the $\lambda_j$ parameters
