@@ -192,6 +192,9 @@ detect convergence issues.
 ```@example DeepGP
 plot(results.l_pdf[1:n_MCMC], legend = false)
 ```
+
+**Note: The Markov chain should likely be run longer, but due to limited computational resources in compiling the documentation, we are not able to run it sufficiently long.**
+
 ### Posterior Predictive Distribution
 
 Now that we have fit our model, we often wish to study the posterior predictive distribution; 
