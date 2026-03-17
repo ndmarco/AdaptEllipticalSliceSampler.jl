@@ -117,6 +117,7 @@ sampling[^3] (AGESS). We will specify the prior scale $\Sigma_0$ parameter, howe
 is centered at 0, we do not have to explicitly specify $\mu_0$.
 
 ```@example Banana
+Random.seed!(123)
 ### Generate our data (100 observations)
 Y_TB = randn(100) * 10 .+ 100 
 

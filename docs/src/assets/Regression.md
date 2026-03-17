@@ -156,6 +156,8 @@ function gen_data_AR1(N::T, P::T; sparsity::Y = 0.8, ρ::Y = 0.2,
     return X, Y_obs, β
 end
 
+Random.seed!(123)
+
 N = 25
 D = 25
 
@@ -297,6 +299,8 @@ function generate_data(N::T, P::T, ν::Y = 6.0) where {Y<:AbstractFloat, T<:Inte
 
     return β, x, μ, y
 end
+
+Random.seed!(123)
 
 D = 2
 N = 1000

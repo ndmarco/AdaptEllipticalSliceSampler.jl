@@ -16,6 +16,9 @@ makedocs(
             "Regression" => "assets/Regression.md",
             "Constrained Inference" => "assets/Constrained.md",
         ],
+        "Advanced Tutorials" => [
+            "Factor Models" => "assets/Factor.md",
+        ],
     ],
 )
 

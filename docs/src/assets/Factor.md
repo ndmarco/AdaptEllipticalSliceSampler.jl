@@ -3,7 +3,7 @@
 In this tutorial, we will cover a more advanced use-case of `AdaptEllipticalSliceSampler.JL`, 
 where we use AGESS[^1] to sample a subset of parameters, and use Gibbs sampling to 
 conditionally update the rest of the samplers. In this tutorial, we consider the following
-factor model using the multiplicative gamma shrinkage prior[^2]:
+factor model using the multiplicative gamma process shrinkage prior[^2]:
 
 $$\mathbf{y}_i = \Lambda \eta_i + \epsilon_i,$$
 
@@ -34,9 +34,9 @@ The conditional posterior distribution of $\delta_h$ and $\phi_{jh}$ are as foll
 
 $$\phi_{jh}\mid \Theta_{-\phi_{jh}} \sim \text{Gamma}\left(0.5(\nu + 1), 0.5(\nu + \tau_h \Lambda_{jh}^2)\right)$$
 
-$$\delta_1 \mid \Theta_{-\delta_1} \sim \text{Gamma}\left(a_1 + 0.5(P\times K), 1 + 0.5(\sum_{l=1}^H \tau_{l}^{(-1)} \sum_{j=1}^P \phi_{jl}\Lambda_{jl}^2)\right)$$
+$$\delta_1 \mid \Theta_{-\delta_1} \sim \text{Gamma}\left(a_1 + 0.5(P\times K), 1 + 0.5\left(\sum_{l=1}^H \tau_{l}^{(-1)} \sum_{j=1}^P \phi_{jl}\Lambda_{jl}^2\right)\right)$$
 
-$$\delta_h \mid \Theta_{-\delta_h} \sim \text{Gamma}\left(a_2 + 0.5(P\times (K - h +1)), 1 + 0.5(\sum_{l=h}^H \tau_{l}^{(-h)} \sum_{j=1}^P \phi_{jl}\Lambda_{jl}^2)\right)\;\;\; (2 \le h \le K)$$
+$$\delta_h \mid \Theta_{-\delta_h} \sim \text{Gamma}\left(a_2 + 0.5(P\times (K - h +1)), 1 + 0.5\left(\sum_{l=h}^H \tau_{l}^{(-h)} \sum_{j=1}^P \phi_{jl}\Lambda_{jl}^2\right)\right)\;\;\; (2 \le h \le K)$$
 
 We can construct Julia functions to update these parameters as follows.
 
@@ -50,28 +50,31 @@ using LinearAlgebra
 Random.seed!(123)
 
 function delta_sampler!(δ::AbstractVector{Y}, ϕ::AbstractMatrix{Y}, Λ::AbstractMatrix{Y}, 
-                        a1_δ::Y, a2_δ::Y) where {Y<:AbstractFloat}
-    factor_rank = length(δ)
-    N = size(Λ)[1]
+                        a1_δ::Y, a2_δ::Y, ph_δ::AbstractVector{Y}) where {Y<:AbstractFloat}
+    K = length(δ)
+    P = size(Λ)[2]
     ## Sample δ1
-    α = a1_δ + 0.5 * factor_rank * N
-    @views β = 1.0 + 0.5 * dot(ϕ[:,1] .* Λ[:,1], Λ[:,1])
-    for i in 2:factor_rank
+    α = a1_δ + 0.5 * K * P
+    @views ph_δ .= ϕ[1,:] .* Λ[1,:]
+    @views β = 1.0 + 0.5 * dot(ph_δ, Λ[1,:])
+    for i in 2:K
         @views τ = prod(δ[2:i])
-        @views β += 0.5 * τ * dot(ϕ[:,i] .* Λ[:,i], Λ[:,i])
+        @views ph_δ .= ϕ[i,:] .* Λ[i,:]
+        @views β += 0.5 * τ * dot(ph_δ, Λ[i,:])
     end
     δ[1] = rand(Gamma(α, 1 / β))
 
     ## Sample rest of δ
-    for i in 2:factor_rank
-        α = a2_δ + 0.5 * (factor_rank - i + 1) * N
+    for i in 2:K
+        α = a2_δ + 0.5 * (K - i + 1) * P
         β = 1.0 
        @views τ = prod(δ[1:(i-1)])
-        for j in i:factor_rank
+        for j in i:K
             if i != j
                 τ *= δ[j]
             end
-            @views β += 0.5 * τ * dot(ϕ[:,j] .* Λ[:,j], Λ[:,j])
+            @views ph_δ .= ϕ[j,:] .* Λ[j,:]
+            @views β += 0.5 * τ * dot(ph_δ, Λ[j,:])
         end
         δ[i] = rand(Gamma(α, 1 / β))
     end
@@ -81,14 +84,14 @@ end
 
 function phi_sampler!(ϕ::AbstractMatrix{Y}, δ::AbstractVector{Y}, Λ::AbstractMatrix{Y}, 
                        ν::Y) where {Y<:AbstractFloat}
-    factor_rank = length(δ)
-    N =  size(Λ)[1]
-    for i in 1:factor_rank
+    K = length(δ)
+    P =  size(Λ)[2]
+    for i in 1:K
         @views τ = prod(δ[1:i])
-        for j in 1:N
+        for j in 1:P
             α = (ν + 1) * 0.5
-            β = 0.5 * (ν  + τ * Λ[j,i]^2)
-            ϕ[j,i] = rand(Gamma(α, 1 / β))
+            β = 0.5 * (ν  + τ * Λ[i,j]^2)
+            ϕ[i,j] = rand(Gamma(α, 1 / β))
         end
     end
 
@@ -107,29 +110,30 @@ makes necessary transformations to our variables of interest.
 ```@example Factor
 function posterior(Λ::AbstractMatrix{Y}, η::AbstractMatrix{Y}, Y_obs::AbstractMatrix{Y}, 
                    D::AbstractMatrix{Y}, ϕ::AbstractMatrix{Y}, δ::AbstractVector{Y}, 
-                   τ_ph::AbstractVector{Y}, a_1::Y, a_2::Y, ν::Y, a::Y, b::Y,
-                   ph::AbstractVector{Y})::Float64 where {Y<:AbstractFloat}
+                   τ_ph::AbstractVector{Y}, a::Y, b::Y,
+                   ph::AbstractVector{Y}, ph1::AbstractVector{Y})::Float64 where {Y<:AbstractFloat}
     
     lpdf::Float64 = 0.0
     ## Likelihood
     for i in 1:size(Y_obs)[1]
         @views mul!(ph, Λ', η[i,:])
         @views ph .-= Y_obs[i,:]
-        @views lpdf += (-0.5* sum(log.(D[diagind(D)])) - 0.5 * dot(ph ./ D[diagind(D)], ph))
+        @views ph1 .= ph ./ D[diagind(D)]
+        @views lpdf += (-0.5* sum(log.(D[diagind(D)])) - 0.5 * dot(ph1, ph))
     end
 
     ig_d = InverseGamma(a,b)
     for i in 1:size(D)[1]
-        @views lpdf += logpdf(ig_d, D[i,i])
+       lpdf += logpdf(ig_d, D[i,i])
     end
 
-    τ_ph .= exp.(δ)
+    τ_ph .= δ
     for i in 2:length(δ)
         τ_ph[i] *= τ_ph[i-1]
     end
 
     for i in 1:size(Λ)[1], j in 1:size(Λ)[2]
-        lpdf -= 0.5 * log(ϕ[i,j] * τ_ph[i]) + 0.5 * ((Λ[i,j]^2) / (ϕ[i,j] * τ_ph[i])^2)
+        lpdf += 0.5 * log(ϕ[i,j] * τ_ph[i]) - 0.5 * (Λ[i,j]^2 * ϕ[i,j] * τ_ph[i])
     end
 
     for i in 1:size(η)[1]
@@ -141,15 +145,16 @@ end
 
 function transform_posterior(x::AbstractVector{Y}, Y_obs::AbstractMatrix{Y}, 
                              ϕ::AbstractMatrix{Y}, δ::AbstractVector{Y}, 
-                             τ_ph::AbstractVector{Y}, a_1::Y, a_2::Y, ν::Y, a::Y, b::Y,
+                             τ_ph::AbstractVector{Y}, a::Y, b::Y,
                              N::T, P::T, K::T, D_ph::AbstractMatrix{Y}, 
-                             ph::AbstractVector{Y})::Float64 where {Y<:AbstractFloat, T<:Integer}
+                             ph::AbstractVector{Y}, 
+                             ph1::AbstractVector{Y})::Float64 where {Y<:AbstractFloat, T<:Integer}
     @views Λ_ph = reshape(x[1:K*P], (K, P))
     @views η_ph = reshape(x[(K*P + 1):(N*K + K*P)], (N, K))
     @views D_ph[diagind(D_ph)] .= exp.(x[(N*K + K*P + 1):(N*K + K*P + P)])
-    lpdf = posterior(Λ_ph, η_ph, Y_obs, D_ph, ϕ, δ, τ_ph, a_1, a_2, ν, a, b, ph)
+    lpdf = posterior(Λ_ph, η_ph, Y_obs, D_ph, ϕ, δ, τ_ph, a, b, ph, ph1)
     ### Jacobian for transformation
-    lpdf += sum(x[(N*K + K*P + 1):(N*K + K*P + P)])
+    @views lpdf += sum(x[(N*K + K*P + 1):(N*K + K*P + P)])
 
     return lpdf
 end
@@ -191,6 +196,8 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
     τ_ph = zeros(K)
     D_ph = diagm(ones(P))
     ph = zeros(P)
+    ph1 = similar(ph)
+    ph_δ = similar(ph)
 
 
     ### Setup adaptive parameters
@@ -212,30 +219,30 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
         if i < (n_MCMC * burnin)
             ### 1-d AGESS updates for fast burn-in
             @views lpdf[i] = AGESS_single_step_1d!(x, y -> transform_posterior(y, Y_obs, 
-                                                   ϕ[i,:,:], δ[i,:], τ_ph, a_1, a_2, ν, a, 
-                                                   b, N, P, K, D_ph, ph), true, 6.0, 
+                                                   ϕ[i,:,:], δ[i,:], τ_ph, a, 
+                                                   b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                    n_params, μ_adapt, 
                                                    Σ_chol_adapt.L, i)
         else
             if rand() > (ϵ + single_step_prop)
                 ### standard AGESS step
                 @views lpdf[i] = AGESS_single_step!(x, z, y -> transform_posterior(y, Y_obs, 
-                                                    ϕ[i,:,:], δ[i,:], τ_ph, a_1, a_2, ν, a, 
-                                                    b, N, P, K, D_ph, ph), true, 6.0, 
+                                                    ϕ[i,:,:], δ[i,:], τ_ph, a, 
+                                                    b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                     n_params, ph_AGESS, μ_adapt, 
                                                     Σ_chol_adapt.L, i)
             elseif rand() < (single_step_prop / (ϵ + single_step_prop))
                 ### AGESS updates with only 1-d updates
                 @views lpdf[i] = AGESS_single_step_1d!(x, y -> transform_posterior(y, Y_obs, 
-                                                       ϕ[i,:,:], δ[i,:], τ_ph, a_1, a_2, ν, a, 
-                                                       b, N, P, K, D_ph, ph), true, 6.0, 
+                                                       ϕ[i,:,:], δ[i,:], τ_ph, a, 
+                                                       b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                        n_params, μ_adapt, 
                                                        Σ_chol_adapt.L, i)
             else
                 ### Non-adaptive update
                 @views lpdf[i] = AGESS_single_step!(x, z, y -> transform_posterior(y, Y_obs, 
-                                                    ϕ[i,:,:], δ[i,:], τ_ph, a_1, a_2, ν, a, 
-                                                    b, N, P, K, D_ph, ph), true, 6.0, 
+                                                    ϕ[i,:,:], δ[i,:], τ_ph, a, 
+                                                    b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                     n_params, ph_AGESS, μ_0, 
                                                     Σ_chol_0.L, i)
             end
@@ -248,7 +255,7 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
 
         ### Gibbs Updates
         @views phi_sampler!(ϕ[i,:,:], δ[i,:], Λ_ph, ν)
-        @views delta_sampler!(δ[i,:], ϕ[i,:,:], Λ_ph, a_1, a_2)
+        @views delta_sampler!(δ[i,:], ϕ[i,:,:], Λ_ph, a_1, a_2, ph_δ)
 
         ### Update Adaptive Scheme
         w_i = i^(-w_const)
@@ -271,7 +278,6 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
             @views ϕ[i+1,:,:] .= ϕ[i,:,:]
             @views δ[i+1,:] .= δ[i,:]
         end
-        println("MCMC iter: ", i, "  lpdf = ", mean(lpdf[i]))
 
         ### Print statement
         if (i % 100) == 0
@@ -285,7 +291,7 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
     D_out = zeros(n_MCMC, P, P)
     for i in 1:n_MCMC
         @views Λ_out[i,:,:] .= reshape(x[i, 1:K*P], (K, P))
-        @views η_out = reshape(x[i, (K*P + 1):(N*K + K*P)], (N, K))
+        @views η_out[i,:,:] .= reshape(x[i, (K*P + 1):(N*K + K*P)], (N, K))
         for j in 1:P
             D_out[i,j,j] = exp(x[i, (N*K + K*P + j)])
         end
@@ -302,7 +308,7 @@ test the performance of our sampler.
 ### Generate Data
 K = 4
 N = 200
-P = 100
+P = 50
 
 Σ = diagm(ones(P))
 ph = zeros(P)
@@ -329,12 +335,191 @@ single_step_prop = 0.001
 burnin = 0.01
 
 
-Λ_out_samp, η_out_samp, D_samp, ϕ_samp, δ_samp  = custom_MCMC(Y_obs, K, n_MCMC, a_1, a_2, a,
-                                                              b, ϵ, single_step_prop, burnin,
-                                                              ν, β)
+@time Λ_samp, η_samp, D_samp, ϕ_samp, δ_samp  = custom_MCMC(Y_obs, K, n_MCMC, a_1, a_2, a,
+                                                      b, ϵ, single_step_prop, burnin,
+                                                      ν, β)
+```
 
+We can look at estimates of $\Lambda'\Lambda + \mathbf{D}$ to see how well we recovered the covariance
+structure. First, we will look at the true covariance matrix.
+
+```@example Factor
+heatmap(Σ_truth)
+```
+
+Now, we can look at the posterior element-wise mean of $\Lambda'\Lambda + \mathbf{D}$.
+```@example Factor
+function posterior_Σ(Λ_samp::AbstractArray{Y,3}, D_samp::AbstractArray{Y,3}, P::T; 
+                     burnin = 0.5) where {Y<:AbstractFloat, T<:Integer}
+    n_MCMC = size(Λ_samp)[1]
+    burnin_num = floor(Int64, burnin * n_MCMC)
+    posterior_samps = zeros(n_MCMC - burnin_num, P, P)
+    for i in (burnin_num +1):n_MCMC
+        @views posterior_samps[i - burnin_num,:,:] .= Λ_samp[i,:,:]' * Λ_samp[i,:,:]
+        posterior_samps[i - burnin_num,:,:] .+= D_samp[i,:,:]
+    end
+    return posterior_samps
+end
+
+Σ_samp = posterior_Σ(Λ_samp, D_samp, P, burnin = 0.5)
+Σ_mean = zeros(P,P)
+for i in 1:P
+    for j in 1:P
+        Σ_mean[i,j] = mean(Σ_samp[:,i,j])
+    end
+end
+
+heatmap(Σ_mean)
+```
+
+We can also look at the trace plots of individual elements of $\Lambda'\Lambda + \mathbf{D}$,
+along with the true value (represented by the horizontal line).
+
+```@example Factor
+plot(Σ_samp[:,1,1])
+hline!([Σ_truth[1,1]])
+```
+
+### Conclusion
+
+As illustrated in this tutorial, the `AdaptEllipticalSliceSampler.jl` package can be used
+to construct custom MCMC schemes. When considering factor analysis in this setting, one may
+naturally question why we should use this custom scheme. Indeed, a Gibbs sampler already exists [^2].
+Alternatively, one could just use AGESS for sampling all parameters! In general, more simulations
+are needed to determine which sampling scheme is the best for this setting. Generally, Gibbs schemes
+can exhibit poor sampling performance when the parameters are highly correlated. Additionally, 
+the conjugate sampling scheme for sampling $\Lambda$ involves inverting a $P \times P$ matrix 
+(or solving a linear system of equations). However, if $K$ is significantly smaller than $P$,
+one could use the Woodbury matrix identity to quickly invert the matrix. In general, AGESS has
+a computational complexity of $\mathcal{O}(\tilde{P}^2)$, where $\tilde{P}$ is the total number 
+of parameters ($\tilde{P} = NK + 2KP + P + K$ using AGESS for all parameters). While AGESS can 
+be used in the setting of factor models, this tutorial, more broadly, serves as a guide for 
+how to construct custom MCMC sampling schemes -- using AGESS to only update a subset of 
+parameters.
+
+However, for completeness, we can compare the results obtained to using AGESS for all parameters.
+
+```@example Factor
+function posterior2(Λ::AbstractMatrix{Y}, η::AbstractMatrix{Y}, Y_obs::AbstractMatrix{Y}, 
+                   D::AbstractMatrix{Y}, ϕ::AbstractMatrix{Y}, δ::AbstractVector{Y}, 
+                   τ_ph::AbstractVector{Y}, a_1::Y, a_2::Y, ν::Y, a::Y, b::Y,
+                   ph::AbstractVector{Y}, ph1::AbstractVector{Y})::Float64 where {Y<:AbstractFloat}
+    
+    lpdf::Float64 = 0.0
+    ## Likelihood
+    for i in 1:size(Y_obs)[1]
+        @views mul!(ph, Λ', η[i,:])
+        @views ph .-= Y_obs[i,:]
+        @views ph1 .= ph ./ D[diagind(D)]
+        @views lpdf += (-0.5* sum(log.(D[diagind(D)])) - 0.5 * dot(ph1, ph))
+    end
+
+     ##Priors 
+    for i in eachindex(δ)
+        if i == 1
+            lpdf += logpdf(Gamma(a_1, 1), exp(δ[1])) + δ[1]
+        else 
+            lpdf += logpdf(Gamma(a_2, 1), exp(δ[i])) + δ[i] 
+        end
+    end
+
+    ig_d = InverseGamma(a,b)
+    for i in 1:size(D)[1]
+       lpdf += logpdf(ig_d, D[i,i]) + log(D[i,i])
+    end
+
+    τ_ph .= exp.(δ)
+    for i in 2:length(δ)
+        τ_ph[i] *= τ_ph[i-1]
+    end
+
+    gamma_d = Gamma(0.5 * ν, 0.5 * ν)
+    for i in 1:size(Λ)[1], j in 1:size(Λ)[2]
+        lpdf += 0.5 * log(exp(ϕ[i,j]) * τ_ph[i]) - 0.5 * (Λ[i,j]^2 * exp(ϕ[i,j]) * τ_ph[i])
+        lpdf += logpdf(gamma_d, exp(ϕ[i,j])) + ϕ[i,j]
+    end
+
+    for i in 1:size(η)[1]
+        @views lpdf += - 0.5 * dot(η[i,:], η[i,:])
+    end
+
+    return lpdf
+end
+
+function transform_posterior2(x::AbstractVector{Y}, Y_obs::AbstractMatrix{Y}, 
+                              δ_ph::AbstractVector{Y}, τ_ph::AbstractVector{Y}, 
+                              a_1::Y, a_2::Y, ν::Y, a::Y, b::Y,
+                              N::T, P::T, K::T, D_ph::AbstractMatrix{Y}, 
+                              ph::AbstractVector{Y}, 
+                              ph1::AbstractVector{Y})::Float64 where {Y<:AbstractFloat, T<:Integer}
+    @views Λ_ph = reshape(x[1:K*P], (K, P))
+    @views η_ph = reshape(x[(K*P + 1):(N*K + K*P)], (N, K))
+    @views D_ph[diagind(D_ph)] .= exp.(x[(N*K + K*P + 1):(N*K + K*P + P)])
+    @views ϕ_ph = reshape(x[(N*K + K*P + P + 1):(N*K + 2*K*P + P)], (K, P))
+    @views δ_ph .= x[(N*K + 2*K*P + P + 1):(N*K + 2*K*P + P + K)]
+    lpdf = posterior2(Λ_ph, η_ph, Y_obs, D_ph, ϕ_ph, δ_ph, τ_ph, a_1, a_2, ν, a, b, ph, ph1)
+
+    return lpdf
+end
+```
+
+Now that we have specified a function evaluating the posterior log pdf, we can call the function
+`AGESS`.
+
+```@example Factor
+# Set variables
+τ_ph = zeros(K)
+δ_ph = zeros(K)
+D_ph = zeros(P,P)
+ph = zeros(P)
+ph1 = similar(ph)
+
+n_params = N*K + 2*K*P + P + K
+
+results = AGESS(x -> transform_posterior2(x, Y_obs, δ_ph, τ_ph, a_1, a_2, ν, a, b, N, P, K,
+                                          D_ph, ph, ph1), n_MCMC, n_params, 
+                                          single_step_prop = 0.01)
+```
+We can extract the parameters using the following code.
+
+```@example Factor
+Λ_samp2 = zeros(n_MCMC, K, P) 
+η_samp2 = zeros(n_MCMC, N, K)
+D_samp2 = zeros(n_MCMC, P, P)
+δ_samp2 = zeros(n_MCMC, K)
+ϕ_samp2 = zeros(n_MCMC, K, P)
+for i in 1:n_MCMC
+    @views Λ_samp2[i,:,:] .= reshape(results.samps[i, 1:K*P], (K, P))
+    @views η_samp2[i,:,:] .= reshape(results.samps[i, (K*P + 1):(N*K + K*P)], (N, K))
+    for j in 1:P
+        D_samp2[i,j,j] = exp(results.samps[i, (N*K + K*P + j)])
+    end
+    @views ϕ_samp2[i,:,:] .= reshape(exp.(results.samps[i, (N*K + K*P + P + 1):(N*K + 2*K*P + P)]), (K, P))
+    @views δ_samp2[i,:] .= exp.(results.samps[i, (N*K + 2*K*P + P + 1):(N*K + 2*K*P + P + K)])
+end
+```
+
+Similarly to before, we can look at the posterior element-wise mean of $\Lambda'\Lambda + \mathbf{D}$.
+
+```@example Factor
+Σ_samp2 = posterior_Σ(Λ_samp2, D_samp2, P, burnin = 0.5)
+Σ_mean2 = zeros(P,P)
+for i in 1:P
+    for j in 1:P
+        Σ_mean2[i,j] = mean(Σ_samp2[:,i,j])
+    end
+end
+
+heatmap(Σ_mean2)
+```
+Lastly, we can look at the trace plots of individual elements of $\Lambda'\Lambda + \mathbf{D}$,
+along with the true value (represented by the horizontal line).
+
+```@example Factor
+plot(Σ_samp2[:,1,1])
+hline!([Σ_truth[1,1]])
 ```
 
 
- [^1]: N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling
- [^2]: A. Bhattacharya and D. B. Dunson. Sparse Bayesian infinite factor models. Biometrika, 98(2):291-306, 2011.
+[^1]: N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling
+[^2]: A. Bhattacharya and D. B. Dunson. Sparse Bayesian infinite factor models. Biometrika, 98(2):291-306, 2011.
