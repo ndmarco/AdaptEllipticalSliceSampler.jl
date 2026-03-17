@@ -380,7 +380,7 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
                 if rand() > (params.ϵ + params.single_step_prop)
                     l_pdf[i] = AGESS_single_step!(x, z, params.log_posterior, params.t_dist, 
                                                   params.ν, params.P, ph, μ_adapt, Σ_chol_adapt.L, i)
-                elseif rand() > (params.single_step_prop / (params.ϵ + params.single_step_prop))
+                elseif rand() < (params.single_step_prop / (params.ϵ + params.single_step_prop))
                     l_pdf[i] = AGESS_single_step_1d!(x, params.log_posterior, params.t_dist, 
                                                      params.ν, params.P, μ_adapt, Σ_chol_adapt.L, i)
                 else
