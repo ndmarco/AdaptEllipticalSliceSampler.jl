@@ -158,10 +158,10 @@ end
 
 Random.seed!(123)
 
-N = 25
+N = 50
 D = 25
 
-X, Y, β = gen_data_AR1(N, D, ρ = 0.8, sparsity = 0.9, σ_sq = 1.0)
+X, Y, β = gen_data_AR1(N, D, ρ = 0.7, sparsity = 0.9, σ_sq = 1.0)
 ```
 
 We visualize the correlation structure of the design matrix.

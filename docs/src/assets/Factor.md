@@ -433,7 +433,7 @@ function posterior2(Λ::AbstractMatrix{Y}, η::AbstractMatrix{Y}, Y_obs::Abstrac
         τ_ph[i] *= τ_ph[i-1]
     end
 
-    gamma_d = Gamma(0.5 * ν, 0.5 * ν)
+    gamma_d = Gamma(0.5 * ν, 2 / ν)
     for i in 1:size(Λ)[1], j in 1:size(Λ)[2]
         lpdf += 0.5 * log(exp(ϕ[i,j]) * τ_ph[i]) - 0.5 * (Λ[i,j]^2 * exp(ϕ[i,j]) * τ_ph[i])
         lpdf += logpdf(gamma_d, exp(ϕ[i,j])) + ϕ[i,j]
