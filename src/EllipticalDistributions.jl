@@ -55,7 +55,7 @@ function dMvT_1d(x::Y, μ::Y, σ::Y, ν::Y) where {Y<:AbstractFloat}
 end
 
 """
-    dMvT_1d(x, μ, σ)
+    dMvN_1d(x, μ, σ)
 
 Calculates the pdf of a one-dimensional normal distribution
 """

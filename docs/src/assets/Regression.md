@@ -156,10 +156,12 @@ function gen_data_AR1(N::T, P::T; sparsity::Y = 0.8, ρ::Y = 0.2,
     return X, Y_obs, β
 end
 
-N = 25
+Random.seed!(123)
+
+N = 50
 D = 25
 
-X, Y, β = gen_data_AR1(N, D, ρ = 0.8, sparsity = 0.9, σ_sq = 1.0)
+X, Y, β = gen_data_AR1(N, D, ρ = 0.7, sparsity = 0.9, σ_sq = 1.0)
 ```
 
 We visualize the correlation structure of the design matrix.
@@ -297,6 +299,8 @@ function generate_data(N::T, P::T, ν::Y = 6.0) where {Y<:AbstractFloat, T<:Inte
 
     return β, x, μ, y
 end
+
+Random.seed!(123)
 
 D = 2
 N = 1000
