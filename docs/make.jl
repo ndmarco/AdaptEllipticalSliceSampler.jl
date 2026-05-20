@@ -27,4 +27,5 @@ makedocs(
 # for more information.
 deploydocs(
     repo = "github.com/ndmarco/AdaptEllipticalSliceSampler.jl.git",
+    devbranch = "main"
 )
