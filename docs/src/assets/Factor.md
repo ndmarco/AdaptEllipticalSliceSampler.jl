@@ -329,12 +329,180 @@ single_step_prop = 0.001
 burnin = 0.01
 
 
-Λ_out_samp, η_out_samp, D_samp, ϕ_samp, δ_samp  = custom_MCMC(Y_obs, K, n_MCMC, a_1, a_2, a,
-                                                              b, ϵ, single_step_prop, burnin,
-                                                              ν, β)
+@time Λ_samp, η_samp, D_samp, ϕ_samp, δ_samp  = custom_MCMC(Y_obs, K, n_MCMC, a_1, a_2, a,
+                                                      b, ϵ, single_step_prop, burnin,
+                                                      ν, β)
+```
 
+We can look at estimates of $\Lambda'\Lambda + \mathbf{D}$ to see how well we recovered the covariance
+structure. First, we will look at the true covariance matrix.
+
+```@example Factor
+heatmap(Σ_truth)
+```
+
+Now, we can look at the posterior element-wise mean of $\Lambda'\Lambda + \mathbf{D}$.
+```@example Factor
+function posterior_Σ(Λ_samp::AbstractArray{Y,3}, D_samp::AbstractArray{Y,3}, P::T; 
+                     burnin = 0.5) where {Y<:AbstractFloat, T<:Integer}
+    n_MCMC = size(Λ_samp)[1]
+    burnin_num = floor(Int64, burnin * n_MCMC)
+    posterior_samps = zeros(n_MCMC - burnin_num, P, P)
+    for i in (burnin_num +1):n_MCMC
+        @views posterior_samps[i - burnin_num,:,:] .= Λ_samp[i,:,:]' * Λ_samp[i,:,:]
+        posterior_samps[i - burnin_num,:,:] .+= D_samp[i,:,:]
+    end
+    return posterior_samps
+end
+
+Σ_samp = posterior_Σ(Λ_samp, D_samp, P, burnin = 0.5)
+Σ_mean = zeros(P,P)
+for i in 1:P
+    for j in 1:P
+        Σ_mean[i,j] = mean(Σ_samp[:,i,j])
+    end
+end
+
+heatmap(Σ_mean)
+```
+
+We can also look at the trace plots of individual elements of $\Lambda'\Lambda + \mathbf{D}$,
+along with the true value (represented by the horizontal line).
+
+```@example Factor
+plot(Σ_samp[:,1,1])
+hline!([Σ_truth[1,1]])
+```
+
+### Conclusion
+
+As illustrated in this tutorial, the `AdaptEllipticalSliceSampler.jl` package can be used
+to construct custom MCMC schemes. When considering factor analysis in this setting, one may notice
+that we can simply use AGESS for sampling all parameters. Although this tutorial primarily serves 
+as a guide for how to construct custom MCMC sampling schemes, we can compare the results obtained
+when using AGESS to sample all parameters.
+
+```@example Factor
+function posterior2(Λ::AbstractMatrix{Y}, η::AbstractMatrix{Y}, Y_obs::AbstractMatrix{Y}, 
+                   D::AbstractMatrix{Y}, ϕ::AbstractMatrix{Y}, δ::AbstractVector{Y}, 
+                   τ_ph::AbstractVector{Y}, a_1::Y, a_2::Y, ν::Y, a::Y, b::Y,
+                   ph::AbstractVector{Y}, ph1::AbstractVector{Y})::Float64 where {Y<:AbstractFloat}
+    
+    lpdf::Float64 = 0.0
+    ## Likelihood
+    for i in 1:size(Y_obs)[1]
+        @views mul!(ph, Λ', η[i,:])
+        @views ph .-= Y_obs[i,:]
+        @views ph1 .= ph ./ D[diagind(D)]
+        @views lpdf += (-0.5* sum(log.(D[diagind(D)])) - 0.5 * dot(ph1, ph))
+    end
+
+     ##Priors 
+    for i in eachindex(δ)
+        if i == 1
+            lpdf += logpdf(Gamma(a_1, 1), exp(δ[1])) + δ[1]
+        else 
+            lpdf += logpdf(Gamma(a_2, 1), exp(δ[i])) + δ[i] 
+        end
+    end
+
+    ig_d = InverseGamma(a,b)
+    for i in 1:size(D)[1]
+       lpdf += logpdf(ig_d, D[i,i]) + log(D[i,i])
+    end
+
+    τ_ph .= exp.(δ)
+    for i in 2:length(δ)
+        τ_ph[i] *= τ_ph[i-1]
+    end
+
+    gamma_d = Gamma(0.5 * ν, 2 / ν)
+    for i in 1:size(Λ)[1], j in 1:size(Λ)[2]
+        lpdf += 0.5 * log(exp(ϕ[i,j]) * τ_ph[i]) - 0.5 * (Λ[i,j]^2 * exp(ϕ[i,j]) * τ_ph[i])
+        lpdf += logpdf(gamma_d, exp(ϕ[i,j])) + ϕ[i,j]
+    end
+
+    for i in 1:size(η)[1]
+        @views lpdf += - 0.5 * dot(η[i,:], η[i,:])
+    end
+
+    return lpdf
+end
+
+function transform_posterior2(x::AbstractVector{Y}, Y_obs::AbstractMatrix{Y}, 
+                              δ_ph::AbstractVector{Y}, τ_ph::AbstractVector{Y}, 
+                              a_1::Y, a_2::Y, ν::Y, a::Y, b::Y,
+                              N::T, P::T, K::T, D_ph::AbstractMatrix{Y}, 
+                              ph::AbstractVector{Y}, 
+                              ph1::AbstractVector{Y})::Float64 where {Y<:AbstractFloat, T<:Integer}
+    @views Λ_ph = reshape(x[1:K*P], (K, P))
+    @views η_ph = reshape(x[(K*P + 1):(N*K + K*P)], (N, K))
+    @views D_ph[diagind(D_ph)] .= exp.(x[(N*K + K*P + 1):(N*K + K*P + P)])
+    @views ϕ_ph = reshape(x[(N*K + K*P + P + 1):(N*K + 2*K*P + P)], (K, P))
+    @views δ_ph .= x[(N*K + 2*K*P + P + 1):(N*K + 2*K*P + P + K)]
+    lpdf = posterior2(Λ_ph, η_ph, Y_obs, D_ph, ϕ_ph, δ_ph, τ_ph, a_1, a_2, ν, a, b, ph, ph1)
+
+    return lpdf
+end
+```
+
+Now that we have specified a function evaluating the posterior log pdf, we can call the function
+`AGESS`.
+
+```@example Factor
+# Set variables
+τ_ph = zeros(K)
+δ_ph = zeros(K)
+D_ph = zeros(P,P)
+ph = zeros(P)
+ph1 = similar(ph)
+
+n_params = N*K + 2*K*P + P + K
+
+results = AGESS(x -> transform_posterior2(x, Y_obs, δ_ph, τ_ph, a_1, a_2, ν, a, b, N, P, K,
+                                          D_ph, ph, ph1), n_MCMC, n_params, 
+                                          single_step_prop = 0.01)
+```
+We can extract the parameters using the following code.
+
+```@example Factor
+Λ_samp2 = zeros(n_MCMC, K, P) 
+η_samp2 = zeros(n_MCMC, N, K)
+D_samp2 = zeros(n_MCMC, P, P)
+δ_samp2 = zeros(n_MCMC, K)
+ϕ_samp2 = zeros(n_MCMC, K, P)
+for i in 1:n_MCMC
+    @views Λ_samp2[i,:,:] .= reshape(results.samps[i, 1:K*P], (K, P))
+    @views η_samp2[i,:,:] .= reshape(results.samps[i, (K*P + 1):(N*K + K*P)], (N, K))
+    for j in 1:P
+        D_samp2[i,j,j] = exp(results.samps[i, (N*K + K*P + j)])
+    end
+    @views ϕ_samp2[i,:,:] .= reshape(exp.(results.samps[i, (N*K + K*P + P + 1):(N*K + 2*K*P + P)]), (K, P))
+    @views δ_samp2[i,:] .= exp.(results.samps[i, (N*K + 2*K*P + P + 1):(N*K + 2*K*P + P + K)])
+end
+```
+
+Similarly to before, we can look at the posterior element-wise mean of $\Lambda'\Lambda + \mathbf{D}$.
+
+```@example Factor
+Σ_samp2 = posterior_Σ(Λ_samp2, D_samp2, P, burnin = 0.5)
+Σ_mean2 = zeros(P,P)
+for i in 1:P
+    for j in 1:P
+        Σ_mean2[i,j] = mean(Σ_samp2[:,i,j])
+    end
+end
+
+heatmap(Σ_mean2)
+```
+Lastly, we can look at the trace plots of individual elements of $\Lambda'\Lambda + \mathbf{D}$,
+along with the true value (represented by the horizontal line).
+
+```@example Factor
+plot(Σ_samp2[:,1,1])
+hline!([Σ_truth[1,1]])
 ```
 
 
- [^1]: N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling
- [^2]: A. Bhattacharya and D. B. Dunson. Sparse Bayesian infinite factor models. Biometrika, 98(2):291-306, 2011.
+[^1]: N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling
+[^2]: A. Bhattacharya and D. B. Dunson. Sparse Bayesian infinite factor models. Biometrika, 98(2):291-306, 2011.

@@ -68,10 +68,10 @@ p = plot(X_N, Y_N, seriestype=:scatter, color = "red", label = "Observed Data")
 plot!(p, time_points, Y_truth, color = "blue", label ="Truth")
 ```
 
-### Specifying the Posterior log pdf
+### Specifying the Log Posterior Density
 
 Using `AdaptEllitpicalSliceSampler.jl`, we essentially only need to specify a function that efficiently
-evaluates the posterior log pdf. Notice that we can integrate out the parameter $\tau$, leading to $\mathbf{Y}$
+evaluates the log posterior density. Notice that we can integrate out the parameter $\tau$, leading to $\mathbf{Y}$
 being multivariate T distributed. We will start by constructing functions that generate $K_{\theta_w}(\mathbf{X})$
 and $K_{\theta_y}(\mathbf{X})$.
 
@@ -157,7 +157,7 @@ end
 
 ### Running AGESS
 
-Now that we have specified a function to efficiently evaluate the posterior log pdf, we can 
+Now that we have specified a function to efficiently evaluate the log posterior density, we can 
 simply specify all of our pre-allocated variables and use the `AGESS` function. We will use
 the standard prior mean $\boldsymbol{\mu}_0$ centered at $\mathbf{0}$, and prior variance 
 $\boldsymbol{\Sigma}_0 = \mathbf{I}$. When calling the function `AGESS`, we will specify an 

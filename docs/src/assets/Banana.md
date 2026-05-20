@@ -9,7 +9,7 @@ $$Y_i \sim \mathcal{N}\left((\theta_1 - \mu_1) + (\theta_2 - \mu_2)^2, 1\right)\
 
 where $Y_i$ is generated from $\mathcal{N}(0.1, 1)$.
 
-### Specification of the Posterior log pdf
+### Specification of the Log Posterior Density
 
 When using the `AdaptEllipticalSliceSampler.jl` package, the main component that the user must specify
 is the log pdf of the target distribution. We will construct a Julia function to evaluate the log pdf 
@@ -70,7 +70,7 @@ scatter(results.samps[2501:10000,1], results.samps[2501:10000,2], alpha = 0.4,
         legend = false)
 ```
 
-We can also view the posterior log pdf evaluated at each iteration of the Markov chain:
+We can also view the log posterior density evaluated at each iteration of the Markov chain:
 
 ```@example Banana
 plot(results.l_pdf[1:10000], legend = false)
@@ -87,7 +87,7 @@ $$\theta_1 \sim \mathcal{N}(0, 4)\;\;\;\;\; \theta_2 \sim \mathcal{N}(0, 4),$$
 
 where $Y_i$ is generated from $\mathcal{N}(100, 100)$.
 
-### Specification of the Posterior log pdf
+### Specification of the Log Posterior Density
 
 We will construct a Julia function to evaluate the log pdf 
 (up to a constant) of the posterior distribution of $\boldsymbol{\theta}$ based on the 
@@ -140,7 +140,7 @@ scatter(results_TB.samps[125001:500000,1], results_TB.samps[125001:500000,2], al
         legend = false)
 ```
 
-Again, we can also view the posterior log pdf evaluated at each iteration of the Markov chain:
+Again, we can also view the log posterior density evaluated at each iteration of the Markov chain:
 
 ```@example Banana
 plot(results_TB.l_pdf[1:500000], legend = false)
@@ -150,7 +150,7 @@ plot(results_TB.l_pdf[1:500000], legend = false)
 
 Sampling from these challenging, yet low-dimensional distributions is fairly simple using adaptive 
 generalized elliptical slice sampling[^3]. Using this package, sampling from these target distributions
-is as simple as efficiently constructing a function that evaluates the posterior log pdf. Comparisons between
+is as simple as efficiently constructing a function that evaluates the log posterior density. Comparisons between
 AGESS and other standard sampling schemes can be found in the main manuscript[^3]. 
 
 [^1]: A. W. Long, K. C. Wolfe, M. J. Mashner, G. S. Chirikjian, et al. The banana distribution is gaussian: A localization study with exponential coordinates. Robotics: Science and Systems VIII, 265(1), 2013.

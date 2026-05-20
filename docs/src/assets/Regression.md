@@ -44,7 +44,7 @@ D = 10
 ```
 
 We can see that we generated the data from our model under $\sigma = 0.5$ ($N = 1000$, $D = 10$). 
-Next, we can write a function that calculates the posterior log pdf. When conducting inference 
+Next, we can write a function that calculates the log posterior density. When conducting inference 
 on variables that have positive support (i.e., $\sigma^2 > 0$), it is often useful to transform
 the variables to remove these constraints. Thus, we will transform $\sigma^2$ using a log 
 transformation to remove the positivity constraints (don't forget the Jacobian term 
@@ -70,7 +70,7 @@ function log_posterior(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
 end
 ```
 
-Now that we have specified a function to efficiently evaluate the posterior log pdf, we can simply
+Now that we have specified a function to efficiently evaluate the log posterior density, we can simply
 use the `AGESS` function to draw samples from the posterior distribution. When calling the 
 function `AGESS`, we will specify an anonymous function with $\text{Param}$ as the only input 
 to the function `log_posterior`, using the global parameter values for $\mathbf{X}$ and $\mathbf{Y}$. 
@@ -174,10 +174,10 @@ We can also view the values of $\boldsymbol{\beta}$.
 scatter(β,legend = false)
 ```
 
-### Specification of the Posterior log pdf
+### Specification of the Log Posterior Density
 
 When using the `AdaptEllipticalSliceSampler.jl`, it is crucial that we construct a function
-that can efficiently evaluate the posterior log pdf. We will first start by constructing two
+that can efficiently evaluate the log posterior density. We will first start by constructing two
 functions that evaluate the priors on $\boldsymbol{\beta}$ and $\boldsymbol{\lambda}$. Since
 $\lambda_j$ has positive support, we will take a log transformation of the $\lambda_j$ parameters
 ($j = 1, \dots, D$). Similarly, we will take a log transformation of $\tau$ and $\sigma$.
@@ -223,7 +223,7 @@ end
 
 ### Running AGESS
 
-Now that we have specified a function to efficiently evaluate the posterior log pdf, we can 
+Now that we have specified a function to efficiently evaluate the log posterior density, we can 
 use the `AGESS` function to generate samples from the posterior distribution. Similarly to before, 
 we will specify an anonymous function with $\text{Param}$ as the only input to the function 
 `log_posterior_HD`, using the global parameter values for $\mathbf{X}$, $\mathbf{y}$, and $D$.
@@ -303,12 +303,12 @@ N = 1000
 β, x, μ, y = generate_data(N, D)
 ```
 
-### Specification of the Posterior log pdf
+### Specification of the Log Posterior Density
 
 Now that we have generated the data, we can construct a function which evaluates the posterior 
 log pdf. As in the previous sections, it is important that we specify a function that is efficiently
 implemented. We will first start by constructing a function that evaluates the log likelihood,
-and then a function that evaluates the posterior log pdf.
+and then a function that evaluates the log posterior density.
 
 ```@example Regression
 function log_likelihood(β::AbstractVector{Y}, x::Matrix{Y}, 
@@ -335,7 +335,7 @@ end
 
 ### Running AGESS
 
-Now that we have specified a function to efficiently evaluate the posterior log pdf, we can 
+Now that we have specified a function to efficiently evaluate the log posterior density, we can 
 use the `AGESS` function to generate samples from the posterior distribution.
 
 ```@example Regression
