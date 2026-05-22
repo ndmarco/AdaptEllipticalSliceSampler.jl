@@ -337,9 +337,15 @@ for conducting inference in these settings. For a detailed comparison between AG
 sampling schemes, please refer to the main manuscript[^7].
 
 [^1]: R. B. Gramacy. Surrogates: Gaussian process modeling, design, and optimization for the applied sciences. Chapman and Hall/CRC, 2020.
+
 [^2]: A. Damianou and N. D. Lawrence. Deep gaussian processes. In Artificial intelligence and statistics, pages 207–215. PMLR, 2013.
+
 [^3]: S. Montagna and S. T. Tokdar. Computer emulation with nonstationary gaussian processes. SIAM/ASA Journal on Uncertainty Quantification, 4(1):26–47, 2016.
+
 [^4]: M. I. Radaideh and T. Kozlowski. Surrogate modeling of advanced computer simulations using deep gaussian processes. Reliability Engineering & System Safety, 195:106731, 2020.
+
 [^5]: A. Sauer, A. Cooper, and R. B. Gramacy. Non-stationary gaussian process surrogates. arXiv preprint arXiv:2305.19242, 2023.
+
 [^6]: A. Sauer, R. B. Gramacy, and D. Higdon. Active learning for deep gaussian process surrogates. Technometrics, 65(1):4–18, 2023.
-[^7]: N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling
+
+[^7]: Marco, N. and Tokdar, S.T., 2026. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659.

@@ -97,7 +97,7 @@ function AGESS_single_step!(x::AbstractMatrix{Y}, z::AbstractVector{Y}, log_post
     θ_max = θ
 
     ## Propose initial first move
-    @views x[i,:] .= ((x[i-1,:] - μ_adapt) .* cos(θ) .+  (z - μ_adapt) .* sin(θ)) .+ μ_adapt
+    @views @. x[i,:] = ((x[i-1,:] - μ_adapt) * cos(θ) +  (z - μ_adapt) * sin(θ)) + μ_adapt
     @views L_star = log_posterior(x[i,:])
     l_pdf = L_star
     if t_dist == true
@@ -123,7 +123,7 @@ function AGESS_single_step!(x::AbstractMatrix{Y}, z::AbstractVector{Y}, log_post
 
         ## Propose new angle
         θ = θ_min + rand(eltype(x)) * (θ_max - θ_min)
-        @views x[i,:] .= ((x[i-1,:] - μ_adapt) .* cos(θ) .+  (z - μ_adapt) .* sin(θ)) .+ μ_adapt
+        @views @. x[i,:] = ((x[i-1,:] - μ_adapt) * cos(θ) +  (z - μ_adapt) * sin(θ)) + μ_adapt
         @views L_star = log_posterior(x[i,:])
         l_pdf = L_star
         if t_dist == true
