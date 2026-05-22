@@ -377,7 +377,7 @@ by computational resources in this tutorial, AGESS can be used to sample from re
 high-dimensional target distributions. Comparisons between AGESS and alternative samplers can 
 be found in the main manuscript[^1].
 
-[^1]: N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling. arXiv preprint arXiv:2605.21659, 2026.
+[^1]: N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
 
 [^2]: C. M. Carvalho, N. G. Polson, and J. G. Scott. Handling sparsity via the horseshoe. In Artificial intelligence and statistics, pages 73–80. PMLR, 2009.
 

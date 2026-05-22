@@ -158,6 +158,6 @@ AGESS and other standard sampling schemes can be found in the main manuscript[^3
 
 [^2]: E. Cameron and A. Pettitt. Recursive pathways to marginal likelihood estimation with prior-sensitivity analysis. Statistical Science, pages 397–419, 2014.
 
-[^3]: N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling. arXiv preprint arXiv:2605.21659, 2026.
+[^3]: N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
 
 [^4]: M. Betancourt. A conceptual introduction to hamiltonian monte carlo. arXiv preprint arXiv:1701.02434, 2017.

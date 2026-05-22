@@ -16,6 +16,6 @@ broken down into the following steps:
 If you found this package useful in your own work and want to cite it in a paper, please consider
 using the following suggested citation: 
 
-**Marco, N. and Tokdar, S.T., 2026. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659.**
+**N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.**
 
 Link to [Paper](https://arxiv.org/abs/2605.21659).
