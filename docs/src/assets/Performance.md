@@ -129,8 +129,8 @@ ph = zeros(1000)
 @benchmark lm_log_posterior_3($Param, $X, $y, $ph)
 ```
 
-We can see that we have a 1000-fold speed-up by just efficiently evaluating the posterior log
-pdf. This directly translates into a similar magnitude increase in the effective sample size 
+We can see that we have a 1000-fold speed-up by just efficiently evaluating the log posterior 
+density. This directly translates into a similar magnitude increase in the effective sample size 
 per second achieved by AGESS. 
 **Therefore, it is paramount to write efficient functions that evaluate the log target distribution when using AGESS.** 
 

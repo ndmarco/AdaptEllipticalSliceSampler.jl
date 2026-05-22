@@ -348,4 +348,4 @@ sampling schemes, please refer to the main manuscript[^7].
 
 [^6]: A. Sauer, R. B. Gramacy, and D. Higdon. Active learning for deep gaussian process surrogates. Technometrics, 65(1):4–18, 2023.
 
-[^7]: Marco, N. and Tokdar, S.T., 2026. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659.
+[^7]: N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling. arXiv preprint arXiv:2605.21659, 2026.

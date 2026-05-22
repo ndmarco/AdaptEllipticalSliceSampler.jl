@@ -84,7 +84,7 @@ targeting the exact target distribution, rather than smooth relaxations of the s
 priors [^2] [^3] [^4].
 
 
-[^1]: Marco, N. and Tokdar, S.T., 2026. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659.
+[^1]: N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling. arXiv preprint arXiv:2605.21659, 2026.
 
 [^2]: Rick Presman, Jason Xu Proceedings of The 26th International Conference on Artificial Intelligence and Statistics, PMLR 206:2310-2326, 2023.
 

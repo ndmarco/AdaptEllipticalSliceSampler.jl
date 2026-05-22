@@ -510,6 +510,6 @@ hline!([Σ_truth[1,1]])
 ```
 
 
-[^1]: Marco, N. and Tokdar, S.T., 2026. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659.
+[^1]: N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling. arXiv preprint arXiv:2605.21659, 2026.
 
 [^2]: A. Bhattacharya and D. B. Dunson. Sparse Bayesian infinite factor models. Biometrika, 98(2):291-306, 2011.

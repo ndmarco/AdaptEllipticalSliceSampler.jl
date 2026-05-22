@@ -68,7 +68,7 @@ X should be populated with the last state of the Markov chain.
 For examples, please view the `Tutorials` section of the documentation.
 
 # References
-N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling.
+N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling. arXiv preprint arXiv:2605.21659, 2026.
 """
 function AGESS_single_step!(x::AbstractMatrix{Y}, z::AbstractVector{Y}, log_posterior::Function, 
                             t_dist::Bool, ν::Y, P::T, ph::AbstractVector{Y}, 
@@ -171,7 +171,7 @@ X should be populated with the last state of the Markov chain.
 For examples, please view the `Tutorials` section of the documentation.
 
 # References
-N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling.
+N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling. arXiv preprint arXiv:2605.21659, 2026.
 """
 function AGESS_single_step_1d!(x::AbstractMatrix{Y}, log_posterior::Function, 
                                t_dist::Bool, ν::Y,  P::T, μ_adapt::AbstractVector{Y}, 
@@ -300,7 +300,7 @@ the AGESS transition scheme.
 For examples, please view the `Tutorials` section of the documentation.
 
 # References
-N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling.
+N. Marco and S. T. Tokdar. Adaptive Generalized Elliptical Slice Sampling. arXiv preprint arXiv:2605.21659, 2026.
 """
 function AGESS(log_posterior::Function, n_MCMC::T, P::T;
                μ_0::Union{<:AbstractVector{Y},Y} = 0.0, Σ_0::Union{<:AbstractMatrix{Y},Y} = 1.0,
