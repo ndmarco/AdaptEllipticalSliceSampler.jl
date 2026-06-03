@@ -99,7 +99,7 @@ end
 @benchmark lm_log_posterior_2($Param, $X, $y, $μ, $μ_0, $Σ_I_N, $Σ_I_P)
 ```
 
-We can see that there was a modest improvement in performance. We cans see that we are allocating
+We can see that there was a modest improvement in performance. We can see that we are allocating
 less memory. However, it is slow to actually construct these multivariate distributions and 
 evaluate the log pdf of these distributions. We can just perform the calculations ourselves and
 get significantly better performance. Since Julia is compiled just-in-time, we should feel free
@@ -132,7 +132,7 @@ ph = zeros(1000)
 We can see that we have a 1000-fold speed-up by just efficiently evaluating the log posterior 
 density. This directly translates into a similar magnitude increase in the effective sample size 
 per second achieved by AGESS. 
-**Therefore, it is paramount to write efficient functions that evaluate the log target distribution when using AGESS.** 
+**Therefore, it is paramount to write efficient functions that evaluate the log posterior density when using AGESS.** 
 
 
 Tips:
