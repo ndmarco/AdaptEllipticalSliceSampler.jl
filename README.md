@@ -2,6 +2,7 @@
 
 [![Build Status](https://github.com/ndmarco/AdaptEllipticalSliceSampler.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ndmarco/AdaptEllipticalSliceSampler.jl/actions/workflows/ci.yml?query=branch%3Amain)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://ndmarco.github.io/AdaptEllipticalSliceSampler.jl/dev)
+[![arXiv](https://img.shields.io/badge/arXiv2605.21659-b31b1b.svg)](https://arxiv.org/abs/2605.21659)
 
 
 This package contains a Julia implementation of adaptive generalized elliptical slice sampling. 
