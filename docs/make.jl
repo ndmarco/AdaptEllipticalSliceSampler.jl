@@ -12,9 +12,10 @@ makedocs(
         "Performance Tips" => "assets/Performance.md",
         "Tutorials" => [
             "Banana" => "assets/Banana.md",
+            "Bayesian Neural Networks" => "assets/BayesNN.md",
+            "Constrained Inference" => "assets/Constrained.md",
             "Deep GP Surrogates" => "assets/Deep_GP.md",
             "Regression" => "assets/Regression.md",
-            "Constrained Inference" => "assets/Constrained.md",
         ],
         "Advanced Tutorials" => [
             "Factor Models" => "assets/Factor.md",
