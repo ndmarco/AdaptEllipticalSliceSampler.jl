@@ -212,9 +212,6 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
 
     ### variable for storing log posterior pdf
     lpdf = zeros(n_MCMC)
-    @views lpdf[1] = transform_posterior(x[1,:], Y_obs, ϕ[1,:,:], δ[1,:], τ_ph, a, 
-                                         b, N, P, K, D_ph, ph, ph1)
-    perm = randperm(n_params)
 
     ### Start MCMC
     for i in 2:n_MCMC
@@ -225,7 +222,7 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
                                                    ϕ[i,:,:], δ[i,:], τ_ph, a, 
                                                    b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                    n_params, μ_adapt, 
-                                                   Σ_chol_adapt.L, lpdf[i-1], perm, i)
+                                                   Σ_chol_adapt.L, i)
         else
             if rand() > (ϵ + single_step_prop)
                 ### standard AGESS step
@@ -233,21 +230,21 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
                                                     ϕ[i,:,:], δ[i,:], τ_ph, a, 
                                                     b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                     n_params, ph_AGESS, μ_adapt, 
-                                                    Σ_chol_adapt.L, lpdf[i-1], i)
+                                                    Σ_chol_adapt.L, i)
             elseif rand() < (single_step_prop / (ϵ + single_step_prop))
                 ### AGESS updates with only 1-d updates
                 @views lpdf[i] = AGESS_single_step_1d!(x, y -> transform_posterior(y, Y_obs, 
                                                        ϕ[i,:,:], δ[i,:], τ_ph, a, 
                                                        b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                        n_params, μ_adapt, 
-                                                       Σ_chol_adapt.L, lpdf[i-1], perm, i)
+                                                       Σ_chol_adapt.L, i)
             else
                 ### Non-adaptive update
                 @views lpdf[i] = AGESS_single_step!(x, z, y -> transform_posterior(y, Y_obs, 
                                                     ϕ[i,:,:], δ[i,:], τ_ph, a, 
                                                     b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                     n_params, ph_AGESS, μ_0, 
-                                                    Σ_chol_0.L, lpdf[i-1], i)
+                                                    Σ_chol_0.L, i)
             end
         end
 
@@ -284,7 +281,7 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
 
         ### Print statement
         if (i % 100) == 0
-            @views println("MCMC iter: ", i, "  lpdf = ", mean(lpdf[i-99:i]))
+            println("MCMC iter: ", i, "  lpdf = ", mean(lpdf[i-99:i]))
         end
     end
 
