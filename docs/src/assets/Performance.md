@@ -41,9 +41,9 @@ using LinearAlgebra
 function lm_log_posterior_1(Param, X, y)
     P = length(Param)
     N = length(y)
-    lpdf = logpdf(MvNormal(X * Param[1:(P-1)],  Param[P] * diagm(ones(N))), y)
+    lpdf = logpdf(MvNormal(X * Param[1:(P-1)],  exp(Param[P]) * diagm(ones(N))), y)
     lpdf += logpdf(MvNormal(zeros(P-1),  diagm(ones(P-1))), Param[1:(P-1)])
-    lpdf += logpdf(InverseGamma(1, 1), Param[P])
+    lpdf += logpdf(InverseGamma(1, 1), exp(Param[P])) + Param[P]
 
     return lpdf
 end
@@ -84,9 +84,9 @@ function lm_log_posterior_2(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
                             Σ_I_P::AbstractMatrix{Y}) where {Y<:AbstractFloat}
     P = length(Param)
     @views μ .= X * Param[1:(P-1)]
-    lpdf = logpdf(MvNormal(μ, Param[P] * Σ_I_N), y)
+    lpdf = logpdf(MvNormal(μ, exp(Param[P]) * Σ_I_N), y)
     @views lpdf += logpdf(MvNormal(μ_0,  Σ_I_P), Param[1:(P-1)])
-    lpdf += logpdf(InverseGamma(1, 1), Param[P])
+    lpdf += logpdf(InverseGamma(1, 1), exp(Param[P])) + Param[P]
 
     return lpdf
 end

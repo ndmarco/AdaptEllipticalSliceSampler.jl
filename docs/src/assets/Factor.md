@@ -13,13 +13,13 @@ $$\Lambda_{jh} \mid \phi_{jh}, \tau_h \sim \mathcal{N}(0, \phi_{jh}^{-1} \tau_h^
 
 $$\phi_{jh} \sim \text{Gamma}(\nu / 2, \nu / 2),$$
 
-$$\tau_h = \prod_{k=1}^h \delta_j \;\;\; (h = 1, \dots, K)$$
+$$\tau_h = \prod_{k=1}^h \delta_k \;\;\; (h = 1, \dots, K)$$
 
 $$\delta_1 \sim \text{Gamma}(a_1, 1),$$
 
 $$\delta_{h} \sim \text{Gamma}(a_2, 1) \;\;\; (h \ge 2),$$
 
-$$\mathbf{D}_{jj} \sim \text{Gamma}(a, b),$$
+$$\mathbf{D}_{jj} \sim \text{Inv-Gamma}(a, b),$$
 
 where $\mathbf{y}_i \in \mathbb{R}^P$, $\Lambda \in \mathbb{R}^{P \times K}$, $\eta_i \in \mathbb{R}^{K}$,
 $\mathbf{D}$ is a Diagonal matrix, and $a_2 > 1$ (to promote shrinkage). In these settings, it is 
@@ -34,9 +34,9 @@ The conditional posterior distribution of $\delta_h$ and $\phi_{jh}$ are as foll
 
 $$\phi_{jh}\mid \Theta_{-\phi_{jh}} \sim \text{Gamma}\left(0.5(\nu + 1), 0.5(\nu + \tau_h \Lambda_{jh}^2)\right)$$
 
-$$\delta_1 \mid \Theta_{-\delta_1} \sim \text{Gamma}\left(a_1 + 0.5(P\times K), 1 + 0.5\left(\sum_{l=1}^H \tau_{l}^{(-1)} \sum_{j=1}^P \phi_{jl}\Lambda_{jl}^2\right)\right)$$
+$$\delta_1 \mid \Theta_{-\delta_1} \sim \text{Gamma}\left(a_1 + 0.5(P\times K), 1 + 0.5\left(\sum_{l=1}^K \tau_{l}^{(-1)} \sum_{j=1}^P \phi_{jl}\Lambda_{jl}^2\right)\right)$$
 
-$$\delta_h \mid \Theta_{-\delta_h} \sim \text{Gamma}\left(a_2 + 0.5(P\times (K - h +1)), 1 + 0.5\left(\sum_{l=h}^H \tau_{l}^{(-h)} \sum_{j=1}^P \phi_{jl}\Lambda_{jl}^2\right)\right)\;\;\; (2 \le h \le K)$$
+$$\delta_h \mid \Theta_{-\delta_h} \sim \text{Gamma}\left(a_2 + 0.5(P\times (K - h +1)), 1 + 0.5\left(\sum_{l=h}^K \tau_{l}^{(-h)} \sum_{j=1}^P \phi_{jl}\Lambda_{jl}^2\right)\right)\;\;\; (2 \le h \le K)$$
 
 We can construct Julia functions to update these parameters as follows.
 
@@ -212,6 +212,9 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
 
     ### variable for storing log posterior pdf
     lpdf = zeros(n_MCMC)
+    @views lpdf[1] = transform_posterior(x[1,:], Y_obs, ϕ[1,:,:], δ[1,:], τ_ph, a, 
+                                         b, N, P, K, D_ph, ph, ph1)
+    perm = randperm(n_params)
 
     ### Start MCMC
     for i in 2:n_MCMC
@@ -222,7 +225,7 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
                                                    ϕ[i,:,:], δ[i,:], τ_ph, a, 
                                                    b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                    n_params, μ_adapt, 
-                                                   Σ_chol_adapt.L, i)
+                                                   Σ_chol_adapt.L, lpdf[i-1], perm, i)
         else
             if rand() > (ϵ + single_step_prop)
                 ### standard AGESS step
@@ -230,21 +233,21 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
                                                     ϕ[i,:,:], δ[i,:], τ_ph, a, 
                                                     b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                     n_params, ph_AGESS, μ_adapt, 
-                                                    Σ_chol_adapt.L, i)
+                                                    Σ_chol_adapt.L, lpdf[i-1], i)
             elseif rand() < (single_step_prop / (ϵ + single_step_prop))
                 ### AGESS updates with only 1-d updates
                 @views lpdf[i] = AGESS_single_step_1d!(x, y -> transform_posterior(y, Y_obs, 
                                                        ϕ[i,:,:], δ[i,:], τ_ph, a, 
                                                        b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                        n_params, μ_adapt, 
-                                                       Σ_chol_adapt.L, i)
+                                                       Σ_chol_adapt.L, lpdf[i-1], perm, i)
             else
                 ### Non-adaptive update
                 @views lpdf[i] = AGESS_single_step!(x, z, y -> transform_posterior(y, Y_obs, 
                                                     ϕ[i,:,:], δ[i,:], τ_ph, a, 
                                                     b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                     n_params, ph_AGESS, μ_0, 
-                                                    Σ_chol_0.L, i)
+                                                    Σ_chol_0.L, lpdf[i-1], i)
             end
         end
 
@@ -281,7 +284,7 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
 
         ### Print statement
         if (i % 100) == 0
-            println("MCMC iter: ", i, "  lpdf = ", mean(lpdf[i-99:i]))
+            @views println("MCMC iter: ", i, "  lpdf = ", mean(lpdf[i-99:i]))
         end
     end
 

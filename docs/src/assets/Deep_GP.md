@@ -13,7 +13,7 @@ has become a popular choice of surrogate models[^3] [^4] [^5] [^6].
 
 Deep GPs provide a flexible non-stationary model using a hierarchical representation of multiple
 stationary Gaussian Processes. Here, we will focus on a two-layer deep GP. Let $\mathbf{Y} \in \mathbb{R}^N$ 
-be the outputs of interest, and let $\mathbf{X} \in \mathbb{R}^{N \times D}$ be the inputs.Our goal is to estimate
+be the outputs of interest, and let $\mathbf{X} \in \mathbb{R}^{N \times D}$ be the inputs. Our goal is to estimate
 the function $f: \mathbb{R}^D \rightarrow \mathbb{R}$ where $Y_i = f(\mathbf{x}_i)$. Letting $W(\mathbf{x})$ 
 $(\mathbf{x} \in \mathbb{R}^D)$ be the augmented Gaussian process, with  
 $\mathbf{W} := (W(\mathbf{x}_1), \dots, W(\mathbf{x}_N)) \in \mathbb{R}^N$, we can specify the 
@@ -23,9 +23,9 @@ $$\mathbf{Y} \sim \mathcal{N}\left(\mathbf{0}, \tau\left(K_{\theta_y}(\mathbf{X}
 
 $$\mathbf{W}  \sim \mathcal{N}\left(\mathbf{0}, K_{\theta_w}(\mathbf{X}) + g_w \mathbf{I}_N\right),$$
 
-$$\tau \sim \text{Inv-Gamma}(\nu/2, \nu/2),$$
+$$\tau \sim \text{Inv-Gamma}(\nu/2, \nu/2);$$
 
-where $K_{\theta_y}(\mathbf{x}_i, \mathbf{x}_j):= \exp\left( - \left[\sum_{d = 1}^D \frac{\left\lVert x_{id} - x_{jd}\right\rVert ^2}{\theta_{y_d}} +  \frac{\left\lVert W_{i} - W_{j}\right\rVert ^2}{\theta_{y_{D+1}}}\right]\right)$, $K_{\theta_y}(\mathbf{x}_i, \mathbf{x}_j):= \exp\left( - \sum_{d = 1}^D \frac{\left\lVert x_{id} - x_{jd}\right\rVert ^2}{\theta_{w_d}}\right)$, and $g_y, g_w \in \mathbb{R}_{+}$.
+where $K_{\theta_y}(\mathbf{x}_i, \mathbf{x}_j):= \exp\left( - \sum_{d = 1}^D \left[\left\lVert x_{id} - x_{jd}\right\rVert^2_2 / \theta_{y_d} +  \left\lVert W_{i} - W_{j}\right\rVert ^2 / \theta_{y_{D+1}}\right]\right)$, $K_{\theta_w}(\mathbf{x}_i, \mathbf{x}_j):= \exp\left( - \sum_{d = 1}^D \left\lVert x_{id} - x_{jd}\right\rVert ^2 / \theta_{w_d}\right)$, and $g_y,g_w \in \mathbb{R}_{+}$.
 In this tutorial, we will consider the case where the following parameters are fixed (as is often done
 when the outputs of the complex computer simulations are deterministic): $g_w = 10^{-8}$, $g_y  = 10^{-8}$,
  and $\nu = 6$.
@@ -70,7 +70,7 @@ plot!(p, time_points, Y_truth, color = "blue", label ="Truth")
 
 ### Specifying the Log Posterior Density
 
-Using `AdaptEllitpicalSliceSampler.jl`, we essentially only need to specify a function that efficiently
+Using `AdaptEllipticalSliceSampler.jl`, we essentially only need to specify a function that efficiently
 evaluates the log posterior density. Notice that we can integrate out the parameter $\tau$, leading to $\mathbf{Y}$
 being multivariate T distributed. We will start by constructing functions that generate $K_{\theta_w}(\mathbf{X})$
 and $K_{\theta_y}(\mathbf{X})$.

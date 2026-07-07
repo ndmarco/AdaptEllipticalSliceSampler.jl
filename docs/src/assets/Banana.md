@@ -47,7 +47,7 @@ sampling[^3] (AGESS). We will also specify the prior mean $\mu_0$ and prior scal
 
 ```@example Banana
 ### Generate our data (100 observations)
-Y = randn(100)
+Y = randn(100) .+ 0.1
 
 ### random mean component of our model
 mu = randn(2) * 3
@@ -125,7 +125,7 @@ Y_TB = randn(100) * 10 .+ 100
 mu_TB = randn(2) .* 3
 
 ### Sample Via AGESS
-### 10000 MCMC samples (N_MCMC = 50000)
+### 500000 MCMC samples (N_MCMC = 500000)
 ### Target distribution dimension (P = 2)
 Σ_0 = diagm(ones(2) .* 4.0)
 results_TB = AGESS(t -> TB_log_posterior(t, Y_TB, mu_TB), 500000, 2; Σ_0 = Σ_0)

@@ -37,8 +37,8 @@ function n_params(arch::BNNArchitecture)
         ## Number of biases
         params += arch.sizes[l + 1]
     end
-    params += (length(arch.sizes) - 1) # prescision parameters
-    params += 1 # precision in likelihoood β
+    params += (length(arch.sizes) - 1) # precision parameters
+    params += 1 # precision in likelihood β
 
     return params
 end
@@ -116,7 +116,7 @@ function transformed_log_posterior(θ::AbstractVector{Y}, X::AbstractMatrix{Y}, 
             lpdf += 0.5 * (nW * log_α[l] - exp(log_α[l]) * sum(abs2, W_ph[l]))
         else
             ## scale variance by the number of nodes in previous layer
-            lpdf += 0.5 * (nW * (log_α[l] + log(arch.sizes[l-1])) - exp(log_α[l]) * arch.sizes[l-1] * sum(abs2, W_ph[l]))
+            lpdf += 0.5 * (nW * (log_α[l] + log(arch.sizes[l])) - exp(log_α[l]) * arch.sizes[l] * sum(abs2, W_ph[l]))
         end
         
         ## prior on biases
@@ -179,7 +179,7 @@ n_obs = size(X_train, 2)
 arch = BNNArchitecture([6, 8, 10, 1]) 
 P = n_params(arch)
 
-## Specify intermediate values used in likelihood calucluation
+## Specify intermediate values used in likelihood calculation
 b_ph = Vector{Vector{Float64}}(undef, length(arch.sizes) - 1)
 H_ph = Vector{Matrix{Float64}}(undef, length(arch.sizes) - 1)
 W_ph = Vector{Matrix{Float64}}(undef, length(arch.sizes) - 1)
@@ -364,7 +364,7 @@ function predictive_interval_at(post_samples::AbstractMatrix{Y}, x_i::AbstractVe
         ## get precision for likelihood
         log_β  = post_samples[s, idx]
         idx += 1
-        # ... unpack row s of post_samples into W_ph, W_g, b_ph, b_g, log_α ...
+
         forward!(Y_ph, W_ph, b_ph, x_mat, H_ph_i)
         σ_i = sqrt(1 / exp(log_β))
         draws_i[k] = Y_ph[1] + σ_i * randn()
@@ -522,7 +522,7 @@ function n_params(arch::HBNNArchitecture)
         ## Number of biases
         params += arch.sizes_mean[l + 1]
     end
-    ## prescision parameters for mean
+    ## precision parameters for mean
     params += length(arch.sizes_mean) - 1
     
     if arch.heterogeneous == true
@@ -534,7 +534,7 @@ function n_params(arch::HBNNArchitecture)
             params += arch.sizes_var[l + 1]
         end
 
-        ## prescision parameters for var
+        ## precision parameters for var
         params += length(arch.sizes_var) - 1
     else
         params += 1
@@ -631,8 +631,8 @@ function transformed_log_posterior(θ::AbstractVector{Y}, X::AbstractMatrix{Y}, 
             lpdf += 0.5 * (nW * log_α_f[l] - exp(log_α_f[l]) * sum(abs2, W_f[l]))
         else
             ## scale variance by the number of nodes in previous layer
-            lpdf += 0.5 * (nW * (log_α_f[l] + log(arch.sizes_mean[l-1])) - (exp(log_α_f[l]) * 
-                            arch.sizes_mean[l-1] * sum(abs2, W_f[l])))
+            lpdf += 0.5 * (nW * (log_α_f[l] + log(arch.sizes_mean[l])) - (exp(log_α_f[l]) * 
+                            arch.sizes_mean[l] * sum(abs2, W_f[l])))
         end
         
         ## prior on biases
@@ -649,8 +649,8 @@ function transformed_log_posterior(θ::AbstractVector{Y}, X::AbstractMatrix{Y}, 
                 lpdf += 0.5 * (nW * log_α_g[l] - exp(log_α_g[l]) * sum(abs2, W_g[l]))
             else
                 ## scale variance by the number of nodes in previous layer
-                lpdf += 0.5 * (nW * (log_α_g[l] + log(arch.sizes_var[l-1])) - (exp(log_α_g[l]) * 
-                                arch.sizes_var[l-1] * sum(abs2, W_g[l])))
+                lpdf += 0.5 * (nW * (log_α_g[l] + log(arch.sizes_var[l])) - (exp(log_α_g[l]) * 
+                                arch.sizes_var[l] * sum(abs2, W_g[l])))
             end
             
             ## prior on biases
@@ -676,7 +676,7 @@ n_1 = 8, n_2 = 10, n_{\text{out}} = 1$) and a relatively shallow and narrow neur
 arch = HBNNArchitecture([6, 8, 10, 1], [6, 6, 1], true) 
 P = n_params(arch)
 
-## Specify intermediate values used in likelihood calucluation
+## Specify intermediate values used in likelihood calculation
 b_f = Vector{Vector{Float64}}(undef, length(arch.sizes_mean) - 1)
 H_f = Vector{Matrix{Float64}}(undef, length(arch.sizes_mean) - 1)
 W_f = Vector{Matrix{Float64}}(undef, length(arch.sizes_mean) - 1)
@@ -986,8 +986,8 @@ hi_vec = zeros(n_test)
 covered = falses(n_test)
 
 for i in 1:n_test
-    lo, hi = predictive_interval_at(results2.samps[burnin:end, :], X_test[:, i], W_ph, W_g,
-                                     b_ph, b_g, log_α_f, log_α_g, H_f_i, H_g_i, f1, g1, arch)
+    lo, hi = predictive_interval_at(results2.samps[burnin:end, :], X_test[:, i], W_f, W_g,
+                                     b_f, b_g, log_α_f, log_α_g, H_f_i, H_g_i, f1, g1, arch)
     lo_vec[i] = lo
     hi_vec[i] = hi
     covered[i] = (lo <= y_test[1, i] <= hi)
@@ -1024,8 +1024,8 @@ for (li, level) in enumerate(nominal_levels)
     q_lo, q_hi = alpha/2, 1 - alpha/2
     covered_at_level = falses(n_test)
     for i in 1:n_test
-        lo, hi = predictive_interval_at(results2.samps[burnin:end, :], X_test[:, i], W_ph, W_g,
-                                        b_ph, b_g, log_α_f, log_α_g, H_f_i, H_g_i, f1, g1, arch;
+        lo, hi = predictive_interval_at(results2.samps[burnin:end, :], X_test[:, i], W_f, W_g,
+                                        b_f, b_g, log_α_f, log_α_g, H_f_i, H_g_i, f1, g1, arch;
                                         q=[q_lo, q_hi])
         covered_at_level[i] = (lo <= y_test[1, i] <= hi)
     end

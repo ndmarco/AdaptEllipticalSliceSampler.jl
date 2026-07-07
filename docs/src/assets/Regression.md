@@ -268,7 +268,7 @@ detect convergence issues.
 plot(results.l_pdf[1:n_MCMC], legend = false)
 ```
 
-## Generalize ReLU Regression
+## Generalized ReLU Regression
 
 As discussed in the main manuscript[^1], AGESS can handle non-differentiable target functions.
 In this section of the tutorial, we consider a generalized regression setting where the posterior
