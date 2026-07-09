@@ -41,7 +41,7 @@ $$\delta_h \mid \Theta_{-\delta_h} \sim \text{Gamma}\left(a_2 + 0.5(P\times (K -
 We can construct Julia functions to update these parameters as follows.
 
 ```@example Factor
-import Random, BenchmarkTools
+using Random, BenchmarkTools
 using AdaptEllipticalSliceSampler
 using Distributions
 using Plots
@@ -191,6 +191,8 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
     n_j = 2
     ph_cholesky_update = ones(n_params)
 
+    perm = randperm(n_params)
+
 
     ### Allocate variables for intermediate calculations
     τ_ph = zeros(K)
@@ -212,6 +214,8 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
 
     ### variable for storing log posterior pdf
     lpdf = zeros(n_MCMC)
+    @views lpdf[1] = transform_posterior(x[1,:], Y_obs, ϕ[1,:,:], δ[1,:], τ_ph, a, 
+                                         b, N, P, K, D_ph, ph, ph1)
 
     ### Start MCMC
     for i in 2:n_MCMC
@@ -222,7 +226,7 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
                                                    ϕ[i,:,:], δ[i,:], τ_ph, a, 
                                                    b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                    n_params, μ_adapt, 
-                                                   Σ_chol_adapt.L, i)
+                                                   Σ_chol_adapt.L, lpdf[i-1], perm, i)
         else
             if rand() > (ϵ + single_step_prop)
                 ### standard AGESS step
@@ -230,21 +234,21 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
                                                     ϕ[i,:,:], δ[i,:], τ_ph, a, 
                                                     b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                     n_params, ph_AGESS, μ_adapt, 
-                                                    Σ_chol_adapt.L, i)
+                                                    Σ_chol_adapt.L, lpdf[i-1], i)
             elseif rand() < (single_step_prop / (ϵ + single_step_prop))
                 ### AGESS updates with only 1-d updates
                 @views lpdf[i] = AGESS_single_step_1d!(x, y -> transform_posterior(y, Y_obs, 
                                                        ϕ[i,:,:], δ[i,:], τ_ph, a, 
                                                        b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                        n_params, μ_adapt, 
-                                                       Σ_chol_adapt.L, i)
+                                                       Σ_chol_adapt.L, lpdf[i-1], perm, i)
             else
                 ### Non-adaptive update
                 @views lpdf[i] = AGESS_single_step!(x, z, y -> transform_posterior(y, Y_obs, 
                                                     ϕ[i,:,:], δ[i,:], τ_ph, a, 
                                                     b, N, P, K, D_ph, ph, ph1), true, 6.0, 
                                                     n_params, ph_AGESS, μ_0, 
-                                                    Σ_chol_0.L, i)
+                                                    Σ_chol_0.L, lpdf[i-1], i)
             end
         end
 
@@ -279,9 +283,12 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
             @views δ[i+1,:] .= δ[i,:]
         end
 
+        ### rerun evaluation of posterior density after gibbs updates
+        @views lpdf[i] = transform_posterior(x[i,:], Y_obs, ϕ[i,:,:], δ[i,:], τ_ph, a, b, N, 
+                                             P, K, D_ph, ph, ph1)
         ### Print statement
         if (i % 100) == 0
-            println("MCMC iter: ", i, "  lpdf = ", mean(lpdf[i-99:i]))
+            @views println("MCMC iter: ", i, "  lpdf = ", mean(lpdf[i-99:i]))
         end
     end
 
@@ -330,7 +337,7 @@ a = 1.0
 b = 1.0
 n_MCMC = 10000
 ϵ = 0.05
-single_step_prop = 0.001 
+single_step_prop = 0.05 
 β = 0.5
 burnin = 0.01
 
@@ -466,8 +473,7 @@ ph1 = similar(ph)
 n_params = N*K + 2*K*P + P + K
 
 results = AGESS(x -> transform_posterior2(x, Y_obs, δ_ph, τ_ph, a_1, a_2, ν, a, b, N, P, K,
-                                          D_ph, ph, ph1), n_MCMC, n_params, 
-                                          single_step_prop = 0.01)
+                                          D_ph, ph, ph1), n_MCMC, n_params)
 ```
 We can extract the parameters using the following code.
 

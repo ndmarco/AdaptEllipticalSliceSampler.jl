@@ -62,6 +62,7 @@ X should be populated with the last state of the Markov chain.
 - `ph::AbstractVector{<:AbstractFloat}`: a vector used for intermediate calculations (dim = P)
 - `μ_adapt::AbstractVector{<:AbstractFloat}`: a vector containing the mean parameter of adapted distribution (dim = P)
 - `Σ_chol_adapt::LowerTriangular{<:AbstractFloat, <:AbstractMatrix{<:AbstractFloat}}`: a lower triangular matrix containing the cholesky decomposition of the scale parameter of the adapted matrix
+- `l_pdf::AbstractFloat`: the log posterior density of current state
 - `i::Integer`: the iteration of the Markov chain 
 
 # Examples
@@ -73,18 +74,19 @@ N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv
 function AGESS_single_step!(x::AbstractMatrix{Y}, z::AbstractVector{Y}, log_posterior::Function, 
                             t_dist::Bool, ν::Y, P::T, ph::AbstractVector{Y}, 
                             μ_adapt::AbstractVector{Y}, Σ_chol_adapt::LowerTriangular{Y, <:AbstractMatrix{Y}}, 
-                            i::T) where {Y<:AbstractFloat, T<:Integer}
-    l_pdf::eltype(x) = 0.0
+                            l_pdf::Y, i::T) where {Y<:AbstractFloat, T<:Integer}
     y::eltype(x) = 0.0
     L_star::eltype(x) = 0.0
     ## Propose new z
     if t_dist == true
         @views cond_rMvT!(z, x[i,:], μ_adapt, Σ_chol_adapt, ν, ph, P)
     else
-        z .= Σ_chol_adapt * randn(P) .+ μ_adapt
+        randn!(z)
+        lmul!(Σ_chol_adapt, z)
+        z .+= μ_adapt
     end
 
-    @views y = log_posterior(x[i,:]) + log(rand())
+    y = l_pdf + log(rand())
     if t_dist == true
         @views y -= dMvT(x[i,:], μ_adapt, Σ_chol_adapt, ph, ν, P)
     else
@@ -165,6 +167,8 @@ X should be populated with the last state of the Markov chain.
 - `P::Integer`: the dimension of the target distribution
 - `μ_adapt::AbstractVector{<:AbstractFloat}`: a vector containing the mean parameter of adapted distribution (dim = P)
 - `Σ_chol_adapt::LowerTriangular{<:AbstractFloat, <:AbstractMatrix{<:AbstractFloat}}`: a lower triangular matrix containing the cholesky decomposition of the scale parameter of the adapted matrix
+- `l_pdf::AbstractFloat`: the log posterior density of current state
+- `perm::AbstractVector{<:Integer}`: a vector containing a placeholder for the permutation of indices
 - `i::Integer`: the iteration of the Markov chain 
 
 # Examples
@@ -176,13 +180,13 @@ N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv
 function AGESS_single_step_1d!(x::AbstractMatrix{Y}, log_posterior::Function, 
                                t_dist::Bool, ν::Y,  P::T, μ_adapt::AbstractVector{Y}, 
                                Σ_chol_adapt::LowerTriangular{Y, <:AbstractMatrix{Y}}, 
-                               i::T) where {Y<:AbstractFloat, T<:Integer}
-    l_pdf::eltype(x) = 0.0
+                               l_pdf::Y, perm::AbstractVector{T}, i::T) where {Y<:AbstractFloat, T<:Integer}
     z::eltype(x) = 0.0
     y::eltype(x) = 0.0
     L_star::eltype(x) = 0.0
-    for j in randperm(P)
-        
+    
+    randperm!(perm)
+    for j in perm
         ## Propose new z from N(0, Σ)
         if t_dist == true
             z = cond_rMvT_1d(x[i,j], μ_adapt[j], Σ_chol_adapt[j,j], ν)
@@ -190,7 +194,7 @@ function AGESS_single_step_1d!(x::AbstractMatrix{Y}, log_posterior::Function,
             z = Σ_chol_adapt[j,j] * randn() + μ_adapt[j]
         end
 
-        @views y = log_posterior(x[i,:]) + log(rand())
+        y = l_pdf + log(rand())
         if t_dist == true
             y -= dMvT_1d(x[i,j], μ_adapt[j], Σ_chol_adapt[j,j], ν)
         else
@@ -272,7 +276,7 @@ the AGESS transition scheme.
 - `t_dist::Bool = true`: a Boolean variable indicating whether to use a t-distribution (true) or normal distribution (false) for elliptical slice sampling (Note: should almost always use t-distribution)
 - `ν::AbstractFloat = 6.0`: the degrees of freedom of the t-distribution
 - `burnin::AbstractFloat = 0.25`: the proportion of chain used for burnin
-- `ϵ::AbstractFloat = 0.1`: the proportion of non-adaptive transitions
+- `ϵ::AbstractFloat = 0.05`: the proportion of non-adaptive transitions
 - `single_step_prop::AbstractFloat = 0.05`: the proportion of transitions where we perform one-dimensional updated (P >= 10)
 - `β::AbstractFloat = 0.5`: the rate at which the adaptation diminishes
 
@@ -304,8 +308,8 @@ N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv
 """
 function AGESS(log_posterior::Function, n_MCMC::T, P::T;
                μ_0::Union{<:AbstractVector{Y},Y} = 0.0, Σ_0::Union{<:AbstractMatrix{Y},Y} = 1.0,
-               init_x::Union{<:AbstractVector{Y},Y} = 0.0, t_dist::Bool = true, ν::Y = 6.0, burnin::Y = 0.25,
-               ϵ::Y = 0.1, single_step_prop::Y = 0.05, β::Y = 0.5) where {Y<:AbstractFloat, T<:Integer}
+               init_x::Union{<:AbstractVector{Y},Y} = 0.0, t_dist::Bool = true, ν::Y = 6.0, burnin::Y = 0.5,
+               ϵ::Y = 0.05, single_step_prop::Y = 0.05, β::Y = 0.5) where {Y<:AbstractFloat, T<:Integer}
    # Get prior mean parameter
    if typeof(μ_0) <: AbstractFloat
         μ_0 = ones(typeof(μ_0), P) .* μ_0
@@ -367,6 +371,8 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
     N_J = 2
     n_j = 2
 
+    perm = randperm(P)
+
     prog = Progress(n_MCMC)
 
     ind_range = 2:n_MCMC
@@ -375,26 +381,32 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
         if P >= 10
             if i < (burnin_num * params.single_step_prop)
                 l_pdf[i] = AGESS_single_step_1d!(x, params.log_posterior, params.t_dist, 
-                                                 params.ν, params.P, μ_adapt, Σ_chol_adapt.L, i)
+                                                 params.ν, params.P, μ_adapt, Σ_chol_adapt.L,
+                                                 l_pdf[i-1], perm, i)
             else
                 if rand() > (params.ϵ + params.single_step_prop)
                     l_pdf[i] = AGESS_single_step!(x, z, params.log_posterior, params.t_dist, 
-                                                  params.ν, params.P, ph, μ_adapt, Σ_chol_adapt.L, i)
+                                                  params.ν, params.P, ph, μ_adapt, Σ_chol_adapt.L, 
+                                                  l_pdf[i-1], i)
                 elseif rand() < (params.single_step_prop / (params.ϵ + params.single_step_prop))
                     l_pdf[i] = AGESS_single_step_1d!(x, params.log_posterior, params.t_dist, 
-                                                     params.ν, params.P, μ_adapt, Σ_chol_adapt.L, i)
+                                                     params.ν, params.P, μ_adapt, Σ_chol_adapt.L, 
+                                                     l_pdf[i-1], perm, i)
                 else
                     l_pdf[i] = AGESS_single_step!(x, z, params.log_posterior, params.t_dist, 
-                                                  params.ν, params.P, ph, μ_0, Σ_chol.L, i)
+                                                  params.ν, params.P, ph, μ_0, Σ_chol.L, 
+                                                  l_pdf[i-1], i)
                 end
             end
         else
             if rand() > params.ϵ
                 l_pdf[i] = AGESS_single_step!(x, z, params.log_posterior, params.t_dist, 
-                                              params.ν, params.P, ph, μ_adapt, Σ_chol_adapt.L, i)
+                                              params.ν, params.P, ph, μ_adapt, Σ_chol_adapt.L, 
+                                              l_pdf[i-1], i)
             else
                 l_pdf[i] = AGESS_single_step!(x, z, params.log_posterior, params.t_dist, 
-                                              params.ν, params.P, ph, μ_0, Σ_chol.L, i)
+                                              params.ν, params.P, ph, μ_0, Σ_chol.L, 
+                                              l_pdf[i-1], i)
             end
         end
         
@@ -409,7 +421,7 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
             Σ_chol_adapt.U .= Σ_chol_adapt_ph.U
             μ_adapt .= μ_adapt_ph
             n_j += 1
-            N_J += floor(n_j^β)
+            N_J += floor(eltype(P), n_j^β)
         end
 
         ## Populate next value in Markov Chain
@@ -419,7 +431,7 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
 
         # Update User
         if (i % 100) == 0
-            update!(prog, Int64(i); showvalues = [("average lpdf", mean(l_pdf[(i-99):i]))])
+            @views update!(prog, Int64(i); showvalues = [("average log posterior density", mean(l_pdf[(i-99):i]))])
         end
         
     end

@@ -1,8 +1,8 @@
 # Deep Gaussian Process Surrogate Modeling
 
-In many scientific domains, the use of complex computer simulations have become more prominent,
+In many scientific domains, the use of complex computer simulations has become more prominent,
 especially in fields where data collection is challenging[^1]. However, these high-fidelity computer
-simulations are often expensive to evaluate, restricting scientists to evaluate the complex
+simulations are often expensive to evaluate, restricting scientists to evaluating the complex
 computer simulation at a limited number of points in the (potentially high-dimensional) input space.
 The use of Gaussian Processes as surrogate models allows for predictive inference across the 
 input space given a limited set of evaluations; enabling scientists to use the model to inform
@@ -27,7 +27,7 @@ $$\tau \sim \text{Inv-Gamma}(\nu/2, \nu/2);$$
 
 where $K_{\theta_y}(\mathbf{x}_i, \mathbf{x}_j):= \exp\left( - \sum_{d = 1}^D \left[\left\lVert x_{id} - x_{jd}\right\rVert^2_2 / \theta_{y_d} +  \left\lVert W_{i} - W_{j}\right\rVert ^2 / \theta_{y_{D+1}}\right]\right)$, $K_{\theta_w}(\mathbf{x}_i, \mathbf{x}_j):= \exp\left( - \sum_{d = 1}^D \left\lVert x_{id} - x_{jd}\right\rVert ^2 / \theta_{w_d}\right)$, and $g_y,g_w \in \mathbb{R}_{+}$.
 In this tutorial, we will consider the case where the following parameters are fixed (as is often done
-when the outputs of the complex computer simulations are deterministic): $g_w = 10^{-8}$, $g_y  = 10^{-8}$,
+when the outputs of the complex computer simulations are deterministic): $g_w = 10^{-8}$, $g_y = 10^{-8}$,
  and $\nu = 6$.
 
 ### Simulating the Data
@@ -178,12 +178,16 @@ g_w = 1e-8
 
 ### MCMC parameters
 P = N_obs + 3
-n_MCMC = 50000
+n_MCMC = 100000
+
+### Initialize with W = X_N
+init_x = zeros(P)
+init_x[1:N_obs] .= X_N
 
 
 ### Run Agess
 results = AGESS(p -> log_posterior(p, X_N, Y_N, Σ1, Σ2, ph1, ph2, g_w, g_y, ν, N_obs), 
-                n_MCMC, P)
+                n_MCMC, P, init_x = init_x)
 ```
 
 We can plot the log pdf of the posterior at every iteration of the Markov chain to potentially
@@ -298,7 +302,7 @@ function predictive_draws(time_points::AbstractVector{Y}, W::AbstractMatrix{Y},
 end
 
 ### Time points of interest
-time_points = collect(collect(LinRange(-2.5, 2.5, 500)))
+time_points = collect(LinRange(-2.5, 2.5, 500))
 time_points = setdiff(time_points, X_N)
 
 ### Run function (remember to transform your log-transformed variables back)
@@ -331,7 +335,7 @@ plot!(p, time_points, Lower_CI, fillrange = Upper_CI, fillalpha = 0.3, alpha = 0
 
 ### Conclusion
 
-Deep Gp models are highly flexible models, that can lead to multimodal posterior distributions.
+Deep GP models are highly flexible models, that can lead to multimodal posterior distributions.
 Adaptive generalized elliptical slice sampling[^7] offers an efficient and reliable sampling method
 for conducting inference in these settings. For a detailed comparison between AGESS and other
 sampling schemes, please refer to the main manuscript[^7].

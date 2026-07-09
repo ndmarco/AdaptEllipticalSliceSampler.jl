@@ -7,7 +7,7 @@ distribution on $\boldsymbol{\theta} := (\theta_1, \theta_2)$ can be specified i
 
 $$Y_i \sim \mathcal{N}\left((\theta_1 - \mu_1) + (\theta_2 - \mu_2)^2, 1\right)\;\;\;\;\; \theta_1 \sim \mathcal{N}(0, 4)\;\;\;\;\; \theta_2 \sim \mathcal{N}(0.5, 4),$$
 
-where $Y_i$ is generated from $\mathcal{N}(0.1, 1)$.
+where $Y_i$ is generated from $\mathcal{N}(1, 1)$.
 
 ### Specification of the Log Posterior Density
 
@@ -47,7 +47,7 @@ sampling[^3] (AGESS). We will also specify the prior mean $\mu_0$ and prior scal
 
 ```@example Banana
 ### Generate our data (100 observations)
-Y = randn(100) .+ 0.1
+Y = randn(100) .+ 1
 
 ### random mean component of our model
 mu = randn(2) * 3

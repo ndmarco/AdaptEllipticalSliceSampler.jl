@@ -739,7 +739,7 @@ results2 = AGESS(θ -> transformed_log_posterior(θ, X_train, y_train, W_f, W_g,
 As we can see, the Markov chain took significantly longer to converge under this more flexible model.
 
 ```@example BayesNN
-burnin = 250000
+burnin = floor(Int64, results2.params.burnin * results2.params.n_MCMC)
 index = collect(25:10:n_MCMC)
 plot(index, results2.l_pdf[index], label = "log target density")
 vline!([burnin], color =:red, label = "burnin")
@@ -1048,7 +1048,7 @@ p_combined = plot(p_coverage, p_calib, layout=(1,2), size=(1100,450),
 display(p_combined)
 ```
 
-We can see that the predictive distributions are better calibrated under the heteroskedastic model. While there is slight undercoverage, one has to remember that this is coverage on a test dataset, and thus slight undercoverage is perhaps expected.
+We can see that the predictive distributions are better calibrated under the heteroskedastic model. While there is a bit of undercoverage, one has to remember that this is coverage on a test dataset, and some undercoverage is perhaps expected.
 
 ## Summary
 
