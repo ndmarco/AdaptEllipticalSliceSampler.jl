@@ -34,14 +34,14 @@ D = 10
 
 ### Benchmark function
 Param = ones(D + 1)
-@benchmark lm_log_posterior_1($Param, $X, $y)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 561 samples with 1 evaluation per sample.
- Range (min … max):  7.372 ms … 281.257 ms  ┊ GC (min … max): 0.00% … 96.74%
- Time  (median):     7.759 ms               ┊ GC (median):    0.00%
- Time  (mean ± σ):   8.926 ms ±  11.682 ms  ┊ GC (mean ± σ):  8.48% ±  7.75%
+@benchmark lm_log_posterior_1($Param, $X, $y)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 565 samples with 1 evaluation per sample.
+ Range (min … max):  7.750 ms … 265.349 ms  ┊ GC (min … max): 0.00% … 97.01%
+ Time  (median):     7.858 ms               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   8.859 ms ±  10.968 ms  ┊ GC (mean ± σ):  8.61% ±  8.34%
 
-    ▆▅█▅                                                       
-  ▅█████▇▅▅▄▃▃▂▃▂▁▁▂▂▃▃▃▄▃▄▃▃▃▃▂▂▂▂▁▁▁▁▁▁▁▁▁▃▄▃▄▃▃▃▂▂▁▂▃▃▃▂▂▃ ▃
-  7.37 ms         Histogram: frequency by time        11.7 ms &lt;
+  ██▁             ▂▁▂                                          
+  ███▆▄▁▄▁▁▁▄▁▁▁▁▅████▅▁▁▅▄▁▁▁▁▁▁▁▁▅▁▁▁▁▄▁▄▁▁▁▁▁▁▆▇▆▅▁▁▁▄▄▆▄▆ ▇
+  7.75 ms      Histogram: log(frequency) by time      13.3 ms &lt;
 
  Memory estimate: 22.92 MiB, allocs estimate: 37.</code></pre><p>Let&#39;s see if we can improve on this by pre-allocating some of our variables and specifying the type of variables.</p><pre><code class="language-julia hljs">function lm_log_posterior_2(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
                             y::AbstractVector{Y}, μ::AbstractVector{Y},
@@ -61,14 +61,14 @@ end
 Σ_I_N = diagm(ones(1000))
 Σ_I_P = diagm(ones(D))
 μ_0 = zeros(D)
-@benchmark lm_log_posterior_2($Param, $X, $y, $μ, $μ_0, $Σ_I_N, $Σ_I_P)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 591 samples with 1 evaluation per sample.
- Range (min … max):  7.005 ms … 286.474 ms  ┊ GC (min … max): 0.00% … 96.81%
- Time  (median):     7.438 ms               ┊ GC (median):    0.00%
- Time  (mean ± σ):   8.460 ms ±  11.588 ms  ┊ GC (mean ± σ):  8.02% ±  7.40%
+@benchmark lm_log_posterior_2($Param, $X, $y, $μ, $μ_0, $Σ_I_N, $Σ_I_P)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 542 samples with 1 evaluation per sample.
+ Range (min … max):  7.431 ms … 266.336 ms  ┊ GC (min … max): 0.00% … 96.30%
+ Time  (median):     7.615 ms               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   9.229 ms ±  11.242 ms  ┊ GC (mean ± σ):  7.35% ±  7.05%
 
-     █▅▃                                                       
-  ▃▇████▆▅▃▃▄▅▆▆▅▄▃▂▂▁▂▁▁▃▂▃▄▄▂▃▂▂▂▁▃▃▅▃▃▃▂▂▂▁▁▂▂▂▃▃▁▂▁▂▂▁▂▁▂ ▃
-  7 ms            Histogram: frequency by time        10.9 ms &lt;
+  ▃█▆                    ▁   ▅▄                 ▂▂▂▁           
+  ████▅▁▁▁▁▁▁▁▁▁▁▁▁▁▁▅█▆██▄▄███▇▁▁▄▄▁▁▁▁▁▁▁▁▁▁▁▄████▁▁▁▁▁▅▄▇▇ ▇
+  7.43 ms      Histogram: log(frequency) by time      12.1 ms &lt;
 
  Memory estimate: 15.28 MiB, allocs estimate: 21.</code></pre><p>We can see that there was a modest improvement in performance. We can see that we are allocating less memory. However, it is slow to actually construct these multivariate distributions and  evaluate the log pdf of these distributions. We can just perform the calculations ourselves and get significantly better performance. Since Julia is compiled just-in-time, we should feel free to use for-loops as we please! (Unlike R)</p><pre><code class="language-julia hljs">function lm_log_posterior_3(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
                             y::AbstractVector{Y}, ph::AbstractVector{Y}) where {Y&lt;: AbstractFloat}
@@ -91,12 +91,12 @@ end
 
 ph = zeros(1000)
 @benchmark lm_log_posterior_3($Param, $X, $y, $ph)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 10000 samples with 9 evaluations per sample.
- Range (min … max):  2.420 μs … 327.509 μs  ┊ GC (min … max): 0.00% … 89.54%
- Time  (median):     2.697 μs               ┊ GC (median):    0.00%
- Time  (mean ± σ):   2.944 μs ±   7.368 μs  ┊ GC (mean ± σ):  5.72% ±  2.27%
+ Range (min … max):  2.556 μs … 345.743 μs  ┊ GC (min … max): 0.00% … 97.54%
+ Time  (median):     2.966 μs               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   3.176 μs ±   7.240 μs  ┊ GC (mean ± σ):  5.00% ±  2.18%
 
-      ▂▇▇██▇▅▃                                                 
-  ▁▂▃▆█████████▆▅▄▃▂▂▂▂▂▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁ ▂
-  2.42 μs         Histogram: frequency by time        4.28 μs &lt;
+             ▄▇█▇▅▁                                            
+  ▂▂▂▃▃▃▃▃▃▄▇██████▆▄▃▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂ ▃
+  2.56 μs         Histogram: frequency by time         4.3 μs &lt;
 
- Memory estimate: 7.88 KiB, allocs estimate: 3.</code></pre><p>We can see that we have a 1000-fold speed-up by just efficiently evaluating the log posterior  density. This directly translates into a similar magnitude increase in the effective sample size  per second achieved by AGESS.  <strong>Therefore, it is paramount to write efficient functions that evaluate the log posterior density when using AGESS.</strong> </p><p>Tips:</p><ul><li><p>Packages like <code>JET.jl</code> can help catch inefficiencies in coding.</p></li><li><p>Pre-allocate variables (especially for intermediate computations)</p></li><li><p><code>@views</code> can help reduce allocating new arrays when doing computations on subarrays</p></li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Documentation/">« Documentation</a><a class="docs-footer-nextpage" href="../Banana/">Banana »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Friday 10 July 2026 17:30">Friday 10 July 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ Memory estimate: 7.88 KiB, allocs estimate: 3.</code></pre><p>We can see that we have a 1000-fold speed-up by just efficiently evaluating the log posterior  density. This directly translates into a similar magnitude increase in the effective sample size  per second achieved by AGESS.  <strong>Therefore, it is paramount to write efficient functions that evaluate the log posterior density when using AGESS.</strong> </p><p>Tips:</p><ul><li><p>Packages like <code>JET.jl</code> can help catch inefficiencies in coding.</p></li><li><p>Pre-allocate variables (especially for intermediate computations)</p></li><li><p><code>@views</code> can help reduce allocating new arrays when doing computations on subarrays</p></li></ul></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../Documentation/">« Documentation</a><a class="docs-footer-nextpage" href="../Banana/">Banana »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Friday 10 July 2026 17:58">Friday 10 July 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
