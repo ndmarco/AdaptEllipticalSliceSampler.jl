@@ -1,6 +1,6 @@
 name = "AdaptEllipticalSliceSampler"
 uuid = "630fce29-b4bc-4795-b1a0-7c5b858f73a1"
-authors = ["Nicholas Marco <ndmarco96@g.ucla.edu> and Surya T. Tokdar"]
+authors = ["Nicholas Marco <nicholas.marco@duke.edu>", "Surya T. Tokdar"]
 version = "0.1.0"
 
 [deps]
