@@ -1,44 +1,4 @@
 """
-    AGESS_MCMC_params(log_posterior, μ_0, Σ_0, t_dist, ν, β, single_step_prop, burnin, ϵ, n_MCMC, P)
-
-A struct containing user-specified values.
-
-# Arguments
-- `log_posterior::Function`: the user-specified function
-- `μ_0::AbstractVector{<:AbstractFloat}`: the user-specified initial mean 
-- `Σ_0::AbstractMatrix{<:AbstractFloat}`: the user-specified initial scale
-- `t_dist::Bool`: the user-specified value
-- `ν::AbstractFloat`: the user-specified degrees of freedom
-- `β::AbstractFloat`: the user-specified β
-- `single_step_prop::AbstractFloat`: the user-specified value
-- `burnin::AbstractFloat`: the user-specified value
-- `ϵ::AbstractFloat`: the user-specified value
-- `n_MCMC::Integer`: the user-specified number of iterations
-- `P::Integer`: the user-specified dimension of target distribution
-"""
-struct AGESS_MCMC_params
-    log_posterior::Function
-    μ_0::AbstractVector{<:AbstractFloat}
-    Σ_0::AbstractMatrix{<:AbstractFloat}
-    t_dist::Bool
-    ν::AbstractFloat
-    β::AbstractFloat
-    single_step_prop::AbstractFloat
-    burnin::AbstractFloat
-    ϵ::AbstractFloat
-    n_MCMC::Integer
-    P::Integer
-end
-
-struct MCMC_output
-    samps::AbstractMatrix{<:AbstractFloat}
-    l_pdf::AbstractVector{<:AbstractFloat}
-    params::AGESS_MCMC_params
-    adapted_Σ::AbstractMatrix{<:AbstractFloat}
-    adapted_μ::AbstractVector{<:AbstractFloat}
-end
-
-"""
     AGESS_single_step!(x, z, params, ph, μ_adapt, Σ_chol_adapt, i)
 
 Performs one iteration of adaptive generalized elliptical slice sampling.
@@ -72,10 +32,10 @@ For examples, please view the `Tutorials` section of the documentation.
 # References
 N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
 """
-function AGESS_single_step!(x_current::AbstractVector{Y}, x_next::AbstractVector{Y}, 
-                            z::AbstractVector{Y}, log_posterior::Function, 
-                            t_dist::Bool, ν::Y, P::T, ph::AbstractVector{Y}, 
-                            μ_adapt::AbstractVector{Y}, Σ_chol_adapt::LowerTriangular{Y, <:AbstractMatrix{Y}}, 
+function AGESS_single_step!(x_current::AbstractVector{Y}, x_next::AbstractVector{Y},
+                            z::AbstractVector{Y}, log_posterior::Function,
+                            t_dist::Bool, ν::Y, P::T, ph::AbstractVector{Y},
+                            μ_adapt::AbstractVector{Y}, Σ_chol_adapt::LowerTriangular{Y, <:AbstractMatrix{Y}},
                             l_pdf::Y; rng::Random.AbstractRNG = Random.default_rng()) where {Y<:AbstractFloat, T<:Integer}
     y::eltype(x_current) = 0.0
     L_star::eltype(x_current) = 0.0
@@ -179,16 +139,17 @@ For examples, please view the `Tutorials` section of the documentation.
 # References
 N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
 """
-function AGESS_single_step_1d!(x_current::AbstractVector{Y}, x_next::AbstractVector{Y}, 
-                               log_posterior::Function, t_dist::Bool, ν::Y, 
-                               μ_adapt::AbstractVector{Y}, 
-                               Σ_chol_adapt::LowerTriangular{Y, <:AbstractMatrix{Y}}, 
+function AGESS_single_step_1d!(x_current::AbstractVector{Y}, x_next::AbstractVector{Y},
+                               log_posterior::Function, t_dist::Bool, ν::Y,
+                               μ_adapt::AbstractVector{Y},
+                               Σ_chol_adapt::LowerTriangular{Y, <:AbstractMatrix{Y}},
                                l_pdf::Y, perm::AbstractVector{T};
                                rng::Random.AbstractRNG = Random.default_rng()) where {Y<:AbstractFloat, T<:Integer}
     z::eltype(x_current) = 0.0
     y::eltype(x_current) = 0.0
     L_star::eltype(x_current) = 0.0
-    
+
+    x_next .= x_current
     randperm!(rng, perm)
     for j in perm
         ## Propose new z from N(0, Σ)
@@ -283,26 +244,14 @@ the AGESS transition scheme.
 - `ϵ::AbstractFloat = 0.05`: the proportion of non-adaptive transitions
 - `single_step_prop::AbstractFloat = 0.05`: the proportion of transitions where we perform one-dimensional updated (P >= 10)
 - `β::AbstractFloat = 0.5`: the rate at which the adaptation diminishes
+- `param_names`: optional vector of parameter names (dimension P)
 
 # Returns
-`output`: a struct containing the following:
-- `samps::AbstractMatrix{<:AbstractFloat}`: a matrix containing the states of the Markov chain (n_MCMC x P)
-- `l_pdf::AbstractVector{<:AbstractFloat}`: a vector containing the posterior log pdf evaluated at each state of the Markov chain
-- `params::struct`: a struct containing the following:
-    * `log_posterior::Function`: the user-specified function
-    * `μ_0::AbstractVector{<:AbstractFloat}`: the user-specified initial mean 
-    * `Σ_0::AbstractMatrix{<:AbstractFloat}`: the user-specified initial scale
-    * `t_dist::Bool`: the user-specified value
-    * `ν::AbstractFloat`: the user-specified degrees of freedom
-    * `β::AbstractFloat`: the user-specified β
-    * `single_step_prop::AbstractFloat`: the user-specified value
-    * `burnin::AbstractFloat`: the user-specified value
-    * `ϵ::AbstractFloat`: the user-specified value
-    * `n_MCMC::Integer`: the user-specified number of iterations
-    * `P::Integer`: the user-specified dimension of target distribution
-- `adapted_Σ::AbstractMatrix{<:AbstractFloat}`: the adapted (learned) scale matrix
-- `adapted_μ::AbstractVector{<:AbstractFloat}`: the adapted (learned) mean vector
-
+`output`: a struct of type MCMCChains.Chains:
+- `value`: An `AxisArray` object with axes `iter` × `var` × `chains`
+- `logevidence` : A field containing the logevidence.
+- `name_map` : A `NamedTuple` mapping each variable to a section.
+- `info` : A `NamedTuple` containing miscellaneous information relevant to the chain.
 
 # Examples
 For examples, please view the `Tutorials` section of the documentation.
@@ -314,130 +263,23 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
                rng::Random.AbstractRNG = Random.default_rng(),
                μ_0::Union{<:AbstractVector{Y},Y} = 0.0, Σ_0::Union{<:AbstractMatrix{Y},Y} = 1.0,
                init_x::Union{<:AbstractVector{Y},Y} = 0.0, t_dist::Bool = true, ν::Y = 6.0, burnin::Y = 0.5,
-               ϵ::Y = 0.05, single_step_prop::Y = 0.05, β::Y = 0.5) where {Y<:AbstractFloat, T<:Integer}
-   # Get prior mean parameter
-   if typeof(μ_0) <: AbstractFloat
-        μ_0 = ones(typeof(μ_0), P) .* μ_0
-    end
-    @argcheck length(μ_0) == P
-
-    # Get prior for variance parameter
-    if typeof(Σ_0) <: AbstractFloat
-        @argcheck Σ_0 > 0.0
-        Σ_0 = diagm(ones(typeof(Σ_0), P)) .* Σ_0
-    end
-
-    # Initial starting point of markov chain
-    if typeof(init_x) <: AbstractFloat
-        init_x = ones(typeof(init_x), P) .* init_x
-    end
-
-    ## Check rest of arguments
-    @argcheck P >= 1
-    @argcheck burnin >= 0.0
-    @argcheck burnin < 1.0
-    @argcheck ϵ >= 0.0
-    @argcheck ϵ < 1.0
-    @argcheck single_step_prop >= 0.0
-    @argcheck single_step_prop < 1.0
-    @argcheck single_step_prop + ϵ <= 1.0
+               ϵ::Y = 0.05, single_step_prop::Y = 0.05, β::Y = 0.5, param_names=missing) where {Y<:AbstractFloat, T<:Integer}
+    ### Construct Sampler
+    sampler = AGESSSampler(P, n_MCMC, μ_0 = μ_0, Σ_0 = Σ_0, init_x = init_x, t_dist = t_dist, ν = ν, 
+                           burnin = burnin, ϵ = ϵ, single_step_prop = single_step_prop, β = β)
     
-    ## Initialize MCMC iterations
-    x = zeros(eltype(μ_0), n_MCMC, P)
-    x[1,:] .= init_x
-    x[2,:] .= init_x
+    ### Construct Model
+    model = AGESSModel(log_posterior, P)
 
-    ## Auxiliary variable
-    z = zeros(eltype(μ_0), P)
-
-    ## Storage of log_posterior evaluations
-    l_pdf = zeros(eltype(μ_0), n_MCMC) 
-
-    ## Construct AGESS_MCMC_params
-    params = AGESS_MCMC_params(log_posterior, μ_0, Σ_0, t_dist, ν, β, single_step_prop,
-                               burnin, ϵ, n_MCMC, P)
-
-    l_pdf[1] = params.log_posterior(init_x)
-    @argcheck isfinite(l_pdf[1]) "Initial starting position of Markov chain must have finite posterior density above 0"
-
-
-    burnin_num = floor(typeof(n_MCMC), params.burnin * params.n_MCMC)
-
-    μ_adapt = deepcopy(params.μ_0)
-    μ_adapt_ph = deepcopy(params.μ_0)
-    ph = similar(μ_adapt)
-
-    Σ_chol = cholesky(params.Σ_0)
-    Σ_chol_adapt = deepcopy(Σ_chol)
-    Σ_chol_adapt_ph = deepcopy(Σ_chol)
-
-    ph_cholesky_update = ones(eltype(μ_0), P)
-    w_const = max(2/3, ((cbrt(P) - 1) / cbrt(P)))
-    N_J = 2
-    n_j = 2
-
-    perm = randperm(rng, P)
-
-    prog = Progress(n_MCMC)
-
-    ind_range = 2:n_MCMC
-    ind_range = convert(UnitRange{eltype(P)}, ind_range)
-    for i in ind_range
-        if P >= 10
-            if i < (burnin_num * params.single_step_prop)
-                @views l_pdf[i] = AGESS_single_step_1d!(x[i-1,:], x[i,:], params.log_posterior, params.t_dist, 
-                                                        params.ν, params.P, μ_adapt, Σ_chol_adapt.L,
-                                                        l_pdf[i-1], perm, i; rng)
-            else
-                if rand(rng) > (params.ϵ + params.single_step_prop)
-                    @views l_pdf[i] = AGESS_single_step!(x[i-1,:], x[i,:], z, params.log_posterior, params.t_dist, 
-                                                         params.ν, params.P, ph, μ_adapt, Σ_chol_adapt.L, 
-                                                         l_pdf[i-1], i; rng)
-                elseif rand(rng) < (params.single_step_prop / (params.ϵ + params.single_step_prop))
-                    @views l_pdf[i] = AGESS_single_step_1d!(x[i-1,:], x[i,:], params.log_posterior, params.t_dist, 
-                                                            params.ν, params.P, μ_adapt, Σ_chol_adapt.L, 
-                                                            l_pdf[i-1], perm, i; rng)
-                else
-                    @views l_pdf[i] = AGESS_single_step!(x[i-1,:], x[i,:], z, params.log_posterior, params.t_dist, 
-                                                         params.ν, params.P, ph, μ_0, Σ_chol.L, 
-                                                         l_pdf[i-1], i; rng)
-                end
-            end
-        else
-            if rand(rng) > params.ϵ
-                @views l_pdf[i] = AGESS_single_step!(x[i-1,:], x[i,:], z, params.log_posterior, params.t_dist, 
-                                                     params.ν, params.P, ph, μ_adapt, Σ_chol_adapt.L, 
-                                                     l_pdf[i-1], i; rng)
-            else
-                @views l_pdf[i] = AGESS_single_step!(x[i-1,:], x[i,:], z, params.log_posterior, params.t_dist, 
-                                                     params.ν, params.P, ph, μ_0, Σ_chol.L, 
-                                                     l_pdf[i-1], i; rng)
-            end
-        end
-        
-        w_i = i^(-w_const)
-        Σ_chol_adapt_ph.U .= sqrt((1 - w_i)) .*  Σ_chol_adapt_ph.U
-        @views ph_cholesky_update .= sqrt(w_i) .* (x[i,:] .- μ_adapt_ph)
-        lowrankupdate!(Σ_chol_adapt_ph, ph_cholesky_update)
-        @views μ_adapt_ph .= (1 - w_i) * μ_adapt_ph +  w_i * x[i,:]
-        
-        ## Adapt mean and covariance
-        if i == N_J
-            Σ_chol_adapt.U .= Σ_chol_adapt_ph.U
-            μ_adapt .= μ_adapt_ph
-            n_j += 1
-            N_J += floor(eltype(P), n_j^β)
-        end
-
-
-        # Update User
-        if (i % 100) == 0
-            @views update!(prog, Int64(i); showvalues = [("average log posterior density", mean(l_pdf[(i-99):i]))])
-        end
-        
+    if ismissing(param_names)
+        param_names = [Symbol(:param_, i) for i in 1:P]
+    else
+        @argcheck length(param_names) == P "param_names must have length $(P), got $(length(param_names))"
+        param_names = Symbol.(param_names)
     end
 
-    output = MCMC_output(x, l_pdf, params, Σ_chol_adapt.L * Σ_chol_adapt.U, μ_adapt)
+    ### Run MCMC
+    chain = AbstractMCMC.sample(rng, model, sampler, n_MCMC; chain_type = MCMCChains.Chains, param_names = param_names)
 
-    return output
+    return chain
 end
