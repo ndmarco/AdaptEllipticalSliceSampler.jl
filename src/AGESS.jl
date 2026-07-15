@@ -53,7 +53,8 @@ distribution, while `i` contains the current state of the Markov chain. The curr
 X should be populated with the last state of the Markov chain.
 
 # Arguments
-- `x::AbstractMatrix{<:AbstractFloat}`: a matrix containing the Markov chain (n_MCMC x P)
+- `x_current::AbstractVector{<:AbstractFloat}`: a vector containing the current state of the Markov Chain
+- `x_next::AbstractVector{<:AbstractFloat}`: a vector which will contain the next state of the Markov Chain
 - `z::AbstractVector{<:AbstractFloat}`: a vector used to create the ellipse (dim = P)
 - `log_posterior::Function`: a function evaluating the log posterior pdf with a vector of parameters as the only input
 - `t_dist::Bool`: a Boolean containing whether to use the T-distribution to generate ellipses
@@ -63,7 +64,7 @@ X should be populated with the last state of the Markov chain.
 - `μ_adapt::AbstractVector{<:AbstractFloat}`: a vector containing the mean parameter of adapted distribution (dim = P)
 - `Σ_chol_adapt::LowerTriangular{<:AbstractFloat, <:AbstractMatrix{<:AbstractFloat}}`: a lower triangular matrix containing the cholesky decomposition of the scale parameter of the adapted matrix
 - `l_pdf::AbstractFloat`: the log posterior density of current state
-- `i::Integer`: the iteration of the Markov chain 
+- `rng::Random.AbstractRNG = Random.default_rng()`: random number generator
 
 # Examples
 For examples, please view the `Tutorials` section of the documentation.
@@ -71,41 +72,42 @@ For examples, please view the `Tutorials` section of the documentation.
 # References
 N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
 """
-function AGESS_single_step!(x::AbstractMatrix{Y}, z::AbstractVector{Y}, log_posterior::Function, 
+function AGESS_single_step!(x_current::AbstractVector{Y}, x_next::AbstractVector{Y}, 
+                            z::AbstractVector{Y}, log_posterior::Function, 
                             t_dist::Bool, ν::Y, P::T, ph::AbstractVector{Y}, 
                             μ_adapt::AbstractVector{Y}, Σ_chol_adapt::LowerTriangular{Y, <:AbstractMatrix{Y}}, 
-                            l_pdf::Y, i::T) where {Y<:AbstractFloat, T<:Integer}
-    y::eltype(x) = 0.0
-    L_star::eltype(x) = 0.0
+                            l_pdf::Y; rng::Random.AbstractRNG = Random.default_rng()) where {Y<:AbstractFloat, T<:Integer}
+    y::eltype(x_current) = 0.0
+    L_star::eltype(x_current) = 0.0
     ## Propose new z
     if t_dist == true
-        @views cond_rMvT!(z, x[i,:], μ_adapt, Σ_chol_adapt, ν, ph, P)
+        @views cond_rMvT!(rng, z, x_current, μ_adapt, Σ_chol_adapt, ν, ph, P)
     else
-        randn!(z)
+        randn!(rng, z)
         lmul!(Σ_chol_adapt, z)
         z .+= μ_adapt
     end
 
-    y = l_pdf + log(rand())
+    y = l_pdf + log(rand(rng))
     if t_dist == true
-        @views y -= dMvT(x[i,:], μ_adapt, Σ_chol_adapt, ph, ν, P)
+        @views y -= dMvT(x_current, μ_adapt, Σ_chol_adapt, ph, ν, P)
     else
-        @views y -= dMvN(x[i,:], μ_adapt, Σ_chol_adapt, ph)
+        @views y -= dMvN(x_current, μ_adapt, Σ_chol_adapt, ph)
     end
 
     ## Propose Initial Angle
-    θ = rand(eltype(x)) * 2 * π
+    θ = rand(rng, eltype(x_next)) * 2 * π
     θ_min = θ - 2 * π
     θ_max = θ
 
     ## Propose initial first move
-    @views @. x[i,:] = ((x[i-1,:] - μ_adapt) * cos(θ) +  (z - μ_adapt) * sin(θ)) + μ_adapt
-    @views L_star = log_posterior(x[i,:])
+    @. x_next = ((x_current - μ_adapt) * cos(θ) +  (z - μ_adapt) * sin(θ)) + μ_adapt
+    @views L_star = log_posterior(x_next)
     l_pdf = L_star
     if t_dist == true
-        @views L_star -= dMvT(x[i,:], μ_adapt, Σ_chol_adapt, ph, ν, P)
+        L_star -= dMvT(x_next, μ_adapt, Σ_chol_adapt, ph, ν, P)
     else
-        @views L_star -= dMvN(x[i,:], μ_adapt, Σ_chol_adapt, ph)
+        L_star -= dMvN(x_next, μ_adapt, Σ_chol_adapt, ph)
     end
 
     ## Check to make sure that posterior pdfs are computable
@@ -124,14 +126,14 @@ function AGESS_single_step!(x::AbstractMatrix{Y}, z::AbstractVector{Y}, log_post
         end
 
         ## Propose new angle
-        θ = θ_min + rand(eltype(x)) * (θ_max - θ_min)
-        @views @. x[i,:] = ((x[i-1,:] - μ_adapt) * cos(θ) +  (z - μ_adapt) * sin(θ)) + μ_adapt
-        @views L_star = log_posterior(x[i,:])
+        θ = θ_min + rand(rng, eltype(x_next)) * (θ_max - θ_min)
+        @. x_next = ((x_current - μ_adapt) * cos(θ) +  (z - μ_adapt) * sin(θ)) + μ_adapt
+        @views L_star = log_posterior(x_next)
         l_pdf = L_star
         if t_dist == true
-            @views L_star -= dMvT(x[i,:], μ_adapt, Σ_chol_adapt, ph, ν, P)
+            @views L_star -= dMvT(x_next, μ_adapt, Σ_chol_adapt, ph, ν, P)
         else
-            @views L_star -= dMvN(x[i,:], μ_adapt, Σ_chol_adapt, ph)
+            @views L_star -= dMvN(x_next, μ_adapt, Σ_chol_adapt, ph)
         end
 
         ## Check to make sure that posterior pdfs are computable
@@ -160,16 +162,16 @@ distribution, while `i` contains the current state of the Markov chain. The curr
 X should be populated with the last state of the Markov chain.
 
 # Arguments
-- `x::AbstractMatrix{<:AbstractFloat}`: a matrix containing the Markov chain (n_MCMC x P)
+- `x_current::AbstractVector{<:AbstractFloat}`: a vector containing the current state of the Markov Chain
+- `x_next::AbstractVector{<:AbstractFloat}`: a vector which will contain the next state of the Markov Chain
 - `log_posterior::Function`: a function evaluating the log posterior pdf with a vector of parameters as the only input
 - `t_dist::Bool`: a Boolean containing whether to use the T-distribution to generate ellipses
 - `ν::AbstractFloat`: the user-specified degrees of freedom
-- `P::Integer`: the dimension of the target distribution
 - `μ_adapt::AbstractVector{<:AbstractFloat}`: a vector containing the mean parameter of adapted distribution (dim = P)
 - `Σ_chol_adapt::LowerTriangular{<:AbstractFloat, <:AbstractMatrix{<:AbstractFloat}}`: a lower triangular matrix containing the cholesky decomposition of the scale parameter of the adapted matrix
 - `l_pdf::AbstractFloat`: the log posterior density of current state
 - `perm::AbstractVector{<:Integer}`: a vector containing a placeholder for the permutation of indices
-- `i::Integer`: the iteration of the Markov chain 
+- `rng::Random.AbstractRNG = Random.default_rng()`: random number generator
 
 # Examples
 For examples, please view the `Tutorials` section of the documentation.
@@ -177,43 +179,45 @@ For examples, please view the `Tutorials` section of the documentation.
 # References
 N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
 """
-function AGESS_single_step_1d!(x::AbstractMatrix{Y}, log_posterior::Function, 
-                               t_dist::Bool, ν::Y,  P::T, μ_adapt::AbstractVector{Y}, 
+function AGESS_single_step_1d!(x_current::AbstractVector{Y}, x_next::AbstractVector{Y}, 
+                               log_posterior::Function, t_dist::Bool, ν::Y, 
+                               μ_adapt::AbstractVector{Y}, 
                                Σ_chol_adapt::LowerTriangular{Y, <:AbstractMatrix{Y}}, 
-                               l_pdf::Y, perm::AbstractVector{T}, i::T) where {Y<:AbstractFloat, T<:Integer}
-    z::eltype(x) = 0.0
-    y::eltype(x) = 0.0
-    L_star::eltype(x) = 0.0
+                               l_pdf::Y, perm::AbstractVector{T};
+                               rng::Random.AbstractRNG = Random.default_rng()) where {Y<:AbstractFloat, T<:Integer}
+    z::eltype(x_current) = 0.0
+    y::eltype(x_current) = 0.0
+    L_star::eltype(x_current) = 0.0
     
-    randperm!(perm)
+    randperm!(rng, perm)
     for j in perm
         ## Propose new z from N(0, Σ)
         if t_dist == true
-            z = cond_rMvT_1d(x[i,j], μ_adapt[j], Σ_chol_adapt[j,j], ν)
+            z = cond_rMvT_1d(rng, x_current[j], μ_adapt[j], Σ_chol_adapt[j,j], ν)
         else
-            z = Σ_chol_adapt[j,j] * randn() + μ_adapt[j]
+            z = Σ_chol_adapt[j,j] * randn(rng) + μ_adapt[j]
         end
 
-        y = l_pdf + log(rand())
+        y = l_pdf + log(rand(rng))
         if t_dist == true
-            y -= dMvT_1d(x[i,j], μ_adapt[j], Σ_chol_adapt[j,j], ν)
+            y -= dMvT_1d(x_current[j], μ_adapt[j], Σ_chol_adapt[j,j], ν)
         else
-            y -= dMvN_1d(x[i,j], μ_adapt[j], Σ_chol_adapt[j,j])
+            y -= dMvN_1d(x_current[j], μ_adapt[j], Σ_chol_adapt[j,j])
         end
 
         ## Propose Initial Angle
-        θ = rand(eltype(x)) * 2 * π
+        θ = rand(rng, eltype(x_current)) * 2 * π
         θ_min = θ - 2 * π
         θ_max = θ
 
         ## Propose initial first move
-        x[i,j] = ((x[i-1,j] - μ_adapt[j]) * cos(θ) +  (z - μ_adapt[j]) * sin(θ)) + μ_adapt[j]
-        @views L_star = log_posterior(x[i,:])
+        x_next[j] = ((x_current[j] - μ_adapt[j]) * cos(θ) +  (z - μ_adapt[j]) * sin(θ)) + μ_adapt[j]
+        @views L_star = log_posterior(x_next)
         l_pdf = L_star
         if t_dist == true
-            L_star -= dMvT_1d(x[i,j], μ_adapt[j], Σ_chol_adapt[j,j], ν)
+            L_star -= dMvT_1d(x_next[j], μ_adapt[j], Σ_chol_adapt[j,j], ν)
         else
-            L_star -= dMvN_1d(x[i,j], μ_adapt[j], Σ_chol_adapt[j,j])
+            L_star -= dMvN_1d(x_next[j], μ_adapt[j], Σ_chol_adapt[j,j])
         end
 
         ## Check to make sure that posterior pdfs are computable
@@ -232,14 +236,14 @@ function AGESS_single_step_1d!(x::AbstractMatrix{Y}, log_posterior::Function,
             end
 
             ## Propose new angle
-            θ = θ_min + rand(eltype(x)) * (θ_max - θ_min)
-            x[i,j] = ((x[i-1,j] - μ_adapt[j]) * cos(θ) +  (z - μ_adapt[j]) * sin(θ)) + μ_adapt[j]
-            @views L_star = log_posterior(x[i,:])
+            θ = θ_min + rand(rng, eltype(x_current)) * (θ_max - θ_min)
+            x_next[j] = ((x_current[j] - μ_adapt[j]) * cos(θ) +  (z - μ_adapt[j]) * sin(θ)) + μ_adapt[j]
+            @views L_star = log_posterior(x_next)
             l_pdf = L_star
             if t_dist == true
-                L_star -= dMvT_1d(x[i,j], μ_adapt[j], Σ_chol_adapt[j,j], ν)
+                L_star -= dMvT_1d(x_next[j], μ_adapt[j], Σ_chol_adapt[j,j], ν)
             else
-                L_star -= dMvN_1d(x[i,j], μ_adapt[j], Σ_chol_adapt[j,j])
+                L_star -= dMvN_1d(x_next[j], μ_adapt[j], Σ_chol_adapt[j,j])
             end
 
             ## Check to make sure that posterior pdfs are computable
@@ -307,6 +311,7 @@ For examples, please view the `Tutorials` section of the documentation.
 N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
 """
 function AGESS(log_posterior::Function, n_MCMC::T, P::T;
+               rng::Random.AbstractRNG = Random.default_rng(),
                μ_0::Union{<:AbstractVector{Y},Y} = 0.0, Σ_0::Union{<:AbstractMatrix{Y},Y} = 1.0,
                init_x::Union{<:AbstractVector{Y},Y} = 0.0, t_dist::Bool = true, ν::Y = 6.0, burnin::Y = 0.5,
                ϵ::Y = 0.05, single_step_prop::Y = 0.05, β::Y = 0.5) where {Y<:AbstractFloat, T<:Integer}
@@ -371,7 +376,7 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
     N_J = 2
     n_j = 2
 
-    perm = randperm(P)
+    perm = randperm(rng, P)
 
     prog = Progress(n_MCMC)
 
@@ -380,33 +385,33 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
     for i in ind_range
         if P >= 10
             if i < (burnin_num * params.single_step_prop)
-                l_pdf[i] = AGESS_single_step_1d!(x, params.log_posterior, params.t_dist, 
-                                                 params.ν, params.P, μ_adapt, Σ_chol_adapt.L,
-                                                 l_pdf[i-1], perm, i)
+                @views l_pdf[i] = AGESS_single_step_1d!(x[i-1,:], x[i,:], params.log_posterior, params.t_dist, 
+                                                        params.ν, params.P, μ_adapt, Σ_chol_adapt.L,
+                                                        l_pdf[i-1], perm, i; rng)
             else
-                if rand() > (params.ϵ + params.single_step_prop)
-                    l_pdf[i] = AGESS_single_step!(x, z, params.log_posterior, params.t_dist, 
-                                                  params.ν, params.P, ph, μ_adapt, Σ_chol_adapt.L, 
-                                                  l_pdf[i-1], i)
-                elseif rand() < (params.single_step_prop / (params.ϵ + params.single_step_prop))
-                    l_pdf[i] = AGESS_single_step_1d!(x, params.log_posterior, params.t_dist, 
-                                                     params.ν, params.P, μ_adapt, Σ_chol_adapt.L, 
-                                                     l_pdf[i-1], perm, i)
+                if rand(rng) > (params.ϵ + params.single_step_prop)
+                    @views l_pdf[i] = AGESS_single_step!(x[i-1,:], x[i,:], z, params.log_posterior, params.t_dist, 
+                                                         params.ν, params.P, ph, μ_adapt, Σ_chol_adapt.L, 
+                                                         l_pdf[i-1], i; rng)
+                elseif rand(rng) < (params.single_step_prop / (params.ϵ + params.single_step_prop))
+                    @views l_pdf[i] = AGESS_single_step_1d!(x[i-1,:], x[i,:], params.log_posterior, params.t_dist, 
+                                                            params.ν, params.P, μ_adapt, Σ_chol_adapt.L, 
+                                                            l_pdf[i-1], perm, i; rng)
                 else
-                    l_pdf[i] = AGESS_single_step!(x, z, params.log_posterior, params.t_dist, 
-                                                  params.ν, params.P, ph, μ_0, Σ_chol.L, 
-                                                  l_pdf[i-1], i)
+                    @views l_pdf[i] = AGESS_single_step!(x[i-1,:], x[i,:], z, params.log_posterior, params.t_dist, 
+                                                         params.ν, params.P, ph, μ_0, Σ_chol.L, 
+                                                         l_pdf[i-1], i; rng)
                 end
             end
         else
-            if rand() > params.ϵ
-                l_pdf[i] = AGESS_single_step!(x, z, params.log_posterior, params.t_dist, 
-                                              params.ν, params.P, ph, μ_adapt, Σ_chol_adapt.L, 
-                                              l_pdf[i-1], i)
+            if rand(rng) > params.ϵ
+                @views l_pdf[i] = AGESS_single_step!(x[i-1,:], x[i,:], z, params.log_posterior, params.t_dist, 
+                                                     params.ν, params.P, ph, μ_adapt, Σ_chol_adapt.L, 
+                                                     l_pdf[i-1], i; rng)
             else
-                l_pdf[i] = AGESS_single_step!(x, z, params.log_posterior, params.t_dist, 
-                                              params.ν, params.P, ph, μ_0, Σ_chol.L, 
-                                              l_pdf[i-1], i)
+                @views l_pdf[i] = AGESS_single_step!(x[i-1,:], x[i,:], z, params.log_posterior, params.t_dist, 
+                                                     params.ν, params.P, ph, μ_0, Σ_chol.L, 
+                                                     l_pdf[i-1], i; rng)
             end
         end
         
@@ -424,10 +429,6 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
             N_J += floor(eltype(P), n_j^β)
         end
 
-        ## Populate next value in Markov Chain
-        if i < n_MCMC
-            @views x[i+1,:] .= x[i,:]
-        end
 
         # Update User
         if (i % 100) == 0
