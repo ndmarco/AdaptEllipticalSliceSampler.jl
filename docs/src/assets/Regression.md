@@ -2,8 +2,9 @@
 
 In this tutorial, we will illustrate how to use the `AdaptEllipticalSliceSampler.jl` package, to
 perform Bayesian computation using the adaptive generalized elliptical slice sampler[^1] in 
-regression settings. We consider three settings in this tutorial: (1) Bayesian linear regression,
-(2) high-dimensional linear sparse regression[^2] [^3], and (3) generalized ReLU regression.
+regression settings. We consider four settings in this tutorial: (1) Bayesian linear regression,
+(2) Bayesian generalized linear regression (3) high-dimensional linear sparse regression[^2] [^3], 
+and (4) generalized ReLU regression.
 
 ## Bayesian Linear Regression
 
@@ -24,6 +25,7 @@ using AdaptEllipticalSliceSampler
 using Distributions
 using Plots
 using LinearAlgebra
+using Turing, MCMCChains, StatsPlots
 
 Random.seed!(123)
 
@@ -44,70 +46,166 @@ D = 10
 ```
 
 We can see that we generated the data from our model under $\sigma = 0.5$ ($N = 1000$, $D = 10$). 
-Next, we can write a function that calculates the log posterior density. When conducting inference 
-on variables that have positive support (i.e., $\sigma^2 > 0$), it is often useful to transform
-the variables to remove these constraints. Thus, we will transform $\sigma^2$ using a log 
-transformation to remove the positivity constraints (don't forget the Jacobian term 
-when calculating the log pdfs). Additionally, we will concatenate all of our variables into 
-one vector $\text{Param} = [\boldsymbol{\beta}, \log(\sigma^2)]$.
+As of version 0.2.0 of `AdaptEllipticalSliceSampler.jl`, the package is now integrated into the 
+`abstractMCMC.jl` framework, allowing us to utilize the 
+[Turing ecosystem](https://turinglang.org/docs/getting-started/index.html).
+Thus, we have two options: (1) we can write a function that calculates the log posterior density
+or (2) we can specify a `Turing.jl` model and directly use that to conduct Bayesian computation.
+While one can easily write a function for evaluating the log_posterior density (while making sure
+to transform $\sigma^2$ into an unconstrained space), let's look at how to use AGESS using a
+`Turing.jl` model. Luckily, `Turing.jl` (and the `AdaptEllitpicalSliceSampling.jl` package) will
+automatically transform constrained parameters into an unconstrained space for sampling (and will
+name the transformed variables with informative names!). Thus, in cases where we can use `Turing.jl`,
+we can not worry about remembering Jacobians!
 
 ```@example Regression
-function log_posterior(Param::AbstractVector{Y}, X::AbstractMatrix{Y}, 
-                       y::AbstractVector{Y}) where {Y<: AbstractFloat}
-    P = length(Param)
-    ## Normal Likelihood
-    @views lpdf = -0.5 * (1 / exp(Param[P])) *  norm(X * Param[1:P-1] - y)^2 - 
-            (0.5 * length(y) * Param[P])
+#### Here is the code for directly specifying the target just in case anyone is interested
+## function log_posterior(Param::AbstractVector{Y}, X::AbstractMatrix{Y}, 
+##                        y::AbstractVector{Y}) where {Y<: AbstractFloat}
+##     P = length(Param)
+##     ## Normal Likelihood
+##     @views lpdf = -0.5 * (1 / exp(Param[P])) *  norm(X * Param[1:P-1] - y)^2 - 
+##             (0.5 * length(y) * Param[P])
+## 
+##     ## Priors
+##     ## Std Normal prior on coefficients
+##     @views lpdf += -0.5 * norm(Param[1:P-1])^2
+## 
+##     ## IG(1,1) prior on scale parameter (log-transformed)
+##     lpdf += -1 * Param[P]  -  (1 / exp(Param[P]))
+##     
+##     return lpdf
+## end
 
-    ## Priors
-    ## Std Normal prior on coefficients
-    @views lpdf += -0.5 * norm(Param[1:P-1])^2
-
-    ## IG(1,1) prior on scale parameter (log-transformed)
-    lpdf += -1 * Param[P]  -  (1 / exp(Param[P]))
+@model function linear_regression(X::AbstractMatrix{Y}, y::AbstractVector{Y}) where {Y<:AbstractFloat}
+    N, D = size(X)
+    ## Make sure dimensions conform
+    @assert length(y) == N
     
-    return lpdf
-end
-```
+    ## Start with priors
+    β ~ MvNormal(zeros(D), I)
+    σ² ~ InverseGamma(1.0, 1.0)
 
-Now that we have specified a function to efficiently evaluate the log posterior density, we can simply
-use the `AGESS` function to draw samples from the posterior distribution. When calling the 
-function `AGESS`, we will specify an anonymous function with $\text{Param}$ as the only input 
-to the function `log_posterior`, using the global parameter values for $\mathbf{X}$ and $\mathbf{Y}$. 
+    ## Specify Likelihood
+    y ~ MvNormal(X * β,  σ² * I)
+
+end;
+
+model = linear_regression(X, y)
+```
+Now that we have constructed the model, we can use AGESS to conduct Bayesian computation by
+simply calling two functions: `AGESSSampler()` and `sample()`.
 
 ```@example Regression
-### Specify the dimension of the target distribution
-P = D + 1
-### Specify the number of MCMC iterations
-n_MCMC = 10000
-
-### Run AGESS
-results = AGESS(Param -> log_posterior(Param, X, y), n_MCMC, P)
+n_MCMC = 10_000
+sampler = AGESSSampler(model, n_MCMC)
+results = sample(model, sampler, n_MCMC)
 ```
 
-We can visualize some of the trace plots of the $\beta$ parameters using the output of `AGESS`.
+We will start by discarding the initial part of the chain due to burn-in and will assess the
+results using `describe()`.
+```@example Regression
+## Discard first 2500 iterations due to burn-in
+results = results[2501:end,:,:]
+describe(results)
+```
+Notice how the parameter names that we specified also follow in the subsequent evaluations of the
+chain---this holds for calling `plot(results)`, `ess(results)`, `autocorplot(results)`, etc.
+instead of using the default plotting function, let's visualize only the positive coefficients
+along with the true value (due to the dimension).
 
 ```@example Regression
 ### Plot trace plot
-plot(results.samps[2501:n_MCMC, findall(β .> 0)])
-### Plot true values
-hline!(β[findall(β .> 0)])
+plot(results[:, findall(β .> 0),:])
+### Plot true values, one per coefficient's own subplot
+true_vals = β[findall(β .> 0)]
+hline!(reshape(true_vals, 1, :), subplot = reshape(1:2:2*length(true_vals), 1, :),
+       color = :red, linestyle = :dash)
 ```
 
 Similarly, we can view the trace plot of $\sigma^2$.
 
 ```@example Regression
 ### Plot trace plot, don't forget to transform the transformed variables back
-plot(exp.(results.samps[2501:n_MCMC, D+1]))
+plot(exp.(results[:log_σ²]), label = false)
 ### Plot true value
-hline!([0.25])
+hline!([0.25], color = :red, label = false)
 ```
 
-Lastly, we can plot the log pdf of the posterior at every iteration of the Markov chain to potentially
+Lastly, we can plot the log posterior density at every iteration of the Markov chain to potentially
 detect convergence issues.
 
 ```@example Regression
-plot(results.l_pdf[1:n_MCMC], legend = false)
+plot(results[:lp], legend = false)
+```
+
+## Bayesian Generalized Linear Regression
+
+Here we will show an example of Bayesian Poisson regression, where we construct the model 
+directly using the `Turing.jl` probabilistic programming language.
+
+Let's start by first generating some synthetic data.
+
+```@example Regression
+function generate_data_poisson(N::T, D::T, intercept::AbstractFloat) where {T<:Integer}
+    β = randn(D) 
+    x = randn(N, D)
+    y = zeros(Float64, N)
+    for i in 1:N
+        y[i] = rand(Poisson(exp(intercept + dot(β, x[i,:]))))
+    end
+
+    return β, x, y
+end
+
+intercept = 1.0
+D = 4
+N = 250
+
+## Generate Data
+β, X, y = generate_data_poisson(N, D, intercept)
+```
+
+Next, we will construct the model using the `Turing.jl` probabilistic programming language.
+```@example Regression
+@model function poisson_regression(X::AbstractMatrix{Y}, y::AbstractVector{Y}) where {Y<:AbstractFloat}
+    N, D = size(X)
+    ## Make sure dimensions conform
+    @assert length(y) == N
+    
+    ## Start with priors
+    intercept ~ Normal(0.0, 1.0)
+    β ~ MvNormal(zeros(D), I)
+
+    for i in 1:N
+        y[i] ~ LogPoisson(intercept + dot(β, X[i,:]))
+    end
+end;
+
+model = poisson_regression(X, y)
+```
+
+We have now constructed our model in the using `Turing.jl`, making it extremely simple to use AGESS to
+conduct MCMC.
+
+```@example Regression
+n_MCMC = 10_000
+sampler = AGESSSampler(model, n_MCMC)
+results = sample(model, sampler, n_MCMC)
+```
+Using the `describe()` function, we can assess the results of the MCMC.
+```@example Regression
+## Discard samples due to burn-in
+results = results[2501:end, :,:]
+describe(results)
+```
+We can view the trace plots by using the `plot()` function, along with the true values.
+```@example Regression
+plot(results)
+### Plot true values, one per coefficient's own subplot
+true_vals = [intercept; β]
+hline!(reshape(true_vals, 1, :), subplot = reshape(1:2:2*length(true_vals), 1, :),
+       color = :red, linestyle = :dash)
 ```
 
 ## High-Dimensional Sparse Linear Regression
@@ -234,7 +332,7 @@ we will specify an anonymous function with $\text{Param}$ as the only input to t
 ### Specify the dimension of the target distribution
 P = 2*D + 2
 ### Specify the number of MCMC iterations
-n_MCMC = 100000
+n_MCMC = 100_000
 
 ### Run AGESS
 results = AGESS(Param -> log_posterior_HD(Param, X, Y, D), n_MCMC, P)

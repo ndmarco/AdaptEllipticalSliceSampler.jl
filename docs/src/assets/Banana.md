@@ -12,7 +12,7 @@ where $Y_i$ is generated from $\mathcal{N}(1, 1)$.
 ### Specification of the Log Posterior Density
 
 When using the `AdaptEllipticalSliceSampler.jl` package, the main component that the user must specify
-is the log pdf of the target distribution. We will construct a Julia function to evaluate the log pdf 
+is the log density of the target distribution. We will construct a Julia function to evaluate the log density 
 (up to a constant) of the posterior distribution of $\boldsymbol{\theta}$ based on the 
 hierarchical representation above.
 
@@ -22,6 +22,7 @@ using AdaptEllipticalSliceSampler
 using Distributions
 using Plots
 using LinearAlgebra
+using Turing, MCMCChains, StatsPlots
 
 Random.seed!(123)
 
@@ -61,19 +62,31 @@ results = AGESS(t -> log_posterior(t, Y, mu), 10000, 2; μ_0 = μ_0, Σ_0 = Σ_0
 ```
 
 We can see that we use an anonymous function to specify the likelihood, where `theta` (our parameters of interest)
-are the only parameters of interest. Here, `Y` and `mu` are the globally specified parameters (not-changing). We can visualize 
+are the only parameters of interest. Here, `Y` and `mu` are the globally specified parameters (not-changing). 
+Using the [Turing ecosystem](https://turinglang.org/docs/getting-started/index.html) we can easily view
 the results as follows:
 
 ```@example Banana
 ## Discard the first 2500 samples to burn-in
-scatter(results.samps[2501:10000,1], results.samps[2501:10000,2], alpha = 0.4, 
-        legend = false)
+results = results[2500:end, :, :]
+# Note `decsribe()` requires MCMCChains
+describe(results)
 ```
-
-We can also view the log posterior density evaluated at each iteration of the Markov chain:
+Note that in scenarios where sampling is quick, most of the `Wall duration` or `Compute duration` will 
+be due to compilation costs (recall `AGESS` using the same call as before, and you should see a 
+significant drop in computational costs). Additionally, we can view the MCMC samples by directly
+extracting the MCMC samples and plotting them ourselves.
 
 ```@example Banana
-plot(results.l_pdf[1:10000], legend = false)
+## Note the 3rd dimension is used when you run multiple chains in parallel
+## Here we only run one chain
+scatter(results[:,1,1], results[:,2,1], legend = false)
+```
+
+Additionally, we can look at the plot of the log posterior density evaluated at each iteration of the Markov chain:
+```@example Banana
+## Note this is results[:1p] can also be called by results[:,3,1]
+plot(results[:lp], legend = false)
 ```
 
 # Twin Banana Distribution
@@ -132,19 +145,29 @@ results_TB = AGESS(t -> TB_log_posterior(t, Y_TB, mu_TB), 500000, 2; Σ_0 = Σ_0
 ```
 
 We can see that we use an anonymous function to specify the posterior pdf, where `theta` (our parameters of interest)
-are the only parameters of interest. Here, `Y` and `mu` are the globally specified parameters (not-changing). We can visualize 
+are the only parameters of interest. Here, `Y` and `mu` are the globally specified parameters (not-changing). We can assess 
 the results as follows:
 
 ```@example Banana
 ## Discard the first 125000 samples to burn-in
-scatter(results_TB.samps[125001:500000,1], results_TB.samps[125001:500000,2], alpha = 0.4, 
-        legend = false)
+results_TB = results_TB[125001:500000,:,:]
+describe(results_TB)
+```
+
+Similarly to before, we can view the MCMC samples. This time we will call them by the variable names, which
+are by default $\text{param_1},\dots,\text{param_P}$ unless specified through the `param_names` argument
+when calling `AEGSS`.
+
+```@example Banana
+## Note the 3rd dimension is used when you run multiple chains in parallel
+## Here we only run one chain
+scatter(results_TB[:param_1], results_TB[:param_2], legend = false)
 ```
 
 Again, we can also view the log posterior density evaluated at each iteration of the Markov chain:
 
 ```@example Banana
-plot(results_TB.l_pdf[1:500000], legend = false)
+plot(results_TB[:lp], legend = false)
 ```
 
 ### Conclusion
