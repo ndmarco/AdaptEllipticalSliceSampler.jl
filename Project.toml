@@ -13,10 +13,17 @@ MCMCChains = "c7f686f2-ff18-58e9-bc7b-31028e88f75d"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
+[weakdeps]
+DynamicPPL = "366bfd00-2699-11ea-058f-f148b4cae6d8"
+
+[extensions]
+AdaptEllipticalSliceSamplerDynamicPPLExt = "DynamicPPL"
+
 [compat]
 AbstractMCMC = "5.15.1"
 ArgCheck = "2.5.0"
 Distributions = "0.25.123"
+DynamicPPL = "0.42"
 LinearAlgebra = "1.11.0"
 LogDensityProblems = "2.2.0"
 MCMCChains = "7.7.0"
@@ -25,7 +32,8 @@ Random = "1.11.0"
 julia = "1.10.10"
 
 [extras]
+DynamicPPL = "366bfd00-2699-11ea-058f-f148b4cae6d8"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Test", "DynamicPPL"]

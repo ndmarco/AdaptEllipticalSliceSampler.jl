@@ -100,6 +100,50 @@ function AGESSSampler(P::Integer, n_MCMC::Integer;
                         single_step_prop, β, w_const, t_dist)
 end
 
+
+function AGESSSampler(model::AbstractMCMC.AbstractModel, n_MCMC::Integer;
+                      μ_0::Union{AbstractVector{Y}, Y} = 0.0, Σ_0::Union{AbstractMatrix{Y}, Y} = 1.0,
+                      init_x::Union{AbstractVector{Y}, Y} = 0.0, t_dist::Bool = true, ν::Y = 6.0, burnin::Y = 0.5,
+                      ϵ::Y = 0.05, single_step_prop::Y = 0.05, β::Y = 0.5) where {Y<:AbstractFloat}
+
+    P = _dimension(model)
+    # Get prior mean parameter
+    if typeof(μ_0) <: AbstractFloat
+        μ_0 = ones(typeof(μ_0), P) .* μ_0
+    end
+    @argcheck length(μ_0) == P
+
+    # Get prior for variance parameter
+    if typeof(Σ_0) <: AbstractFloat
+        @argcheck Σ_0 > 0.0
+        Σ_0 = diagm(ones(typeof(Σ_0), P)) .* Σ_0
+    end
+
+    # Initial starting point of markov chain
+    if typeof(init_x) <: AbstractFloat
+        init_x = ones(typeof(init_x), P) .* init_x
+    end
+
+    @argcheck length(μ_0) == P
+
+    ## Check rest of arguments
+    @argcheck P >= 1
+    @argcheck n_MCMC >= 1
+    @argcheck burnin >= 0.0
+    @argcheck burnin < 1.0
+    @argcheck ϵ >= 0.0
+    @argcheck ϵ < 1.0
+    @argcheck single_step_prop >= 0.0
+    @argcheck single_step_prop < 1.0
+    @argcheck single_step_prop + ϵ <= 1.0
+
+    Σ_0_chol = cholesky(Σ_0)
+    w_const = max(2/3, ((cbrt(P) - 1) / cbrt(P)))
+
+    return AGESSSampler(μ_0, Σ_0, Σ_0_chol, init_x, Int(P), Int(n_MCMC), ν, burnin, ϵ,
+                        single_step_prop, β, w_const, t_dist)
+end
+
 """
     AGESSState
 
@@ -133,7 +177,8 @@ struct AGESSTransition{V<:AbstractVector{<:AbstractFloat}, Y<:AbstractFloat}
     lpdf::Y
 end
 
-function AbstractMCMC.step(rng::Random.AbstractRNG, model::AbstractMCMC.AbstractModel, sampler::AGESSSampler; kwargs...)
+### Initial step
+function _initial_step(rng::Random.AbstractRNG, model::AbstractMCMC.AbstractModel, sampler::AGESSSampler; kwargs...)
     @argcheck _dimension(model) == sampler.P "Sampler was constructed for dimension $(sampler.P) but model has dimension $(_dimension(model))"
 
     x_current = deepcopy(sampler.init_x)
@@ -152,7 +197,7 @@ function AbstractMCMC.step(rng::Random.AbstractRNG, model::AbstractMCMC.Abstract
         similar(x_current),         # z
         randperm(rng, sampler.P),   # perm
         similar(x_current),         # ph_cholesky_update
-        1,                          # iteration 
+        1,                          # iteration
         2,                          # n_j
         2,                          # N_j
     )
