@@ -279,7 +279,7 @@ function AGESS(log_posterior::Function, n_MCMC::T, P::T;
     end
 
     ### Run MCMC
-    chain = AbstractMCMC.sample(rng, model, sampler, n_MCMC; chain_type = MCMCChains.Chains, param_names = param_names)
-
+    chain = AbstractMCMC.sample(rng, model, sampler, n_MCMC; chain_type = MCMCChains.Chains,
+                                param_names = param_names)
     return chain
 end

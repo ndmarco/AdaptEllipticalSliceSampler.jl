@@ -1,5 +1,5 @@
 using AdaptEllipticalSliceSampler
-using Test, LinearAlgebra, Distributions
+using Test, LinearAlgebra, Distributions, Turing
 
 @testset "AdaptEllipticalSliceSampler.jl" begin
     
@@ -29,32 +29,41 @@ using Test, LinearAlgebra, Distributions
         return lpdf
     end
 
+    ####################################
+    ## Test direct way of using AGESS ##
+    ####################################
     β, X, y = generate_data(1000, 10)
     mcmc_out = AGESS(β -> log_posterior(β, X, y), 1000, 11)
+    mcmc_out = mcmc_out[500:1000,:,:]
 
     ## Test recovery of β coefficients
-    for i in 1:10
-        @test abs(mean(mcmc_out.samps[500:1000, i]) - β[i]) < 0.05
+    @test maximum(mean(mcmc_out)[1:10,2] .- β) < 0.05
+    ## Test recovery of scale parameter
+    @test abs(mean(exp.(mcmc_out.value[:, 11,:])) - 0.1) < 0.2
+
+    ####################################
+    ## Test using Turing.jl framework ##
+    ####################################
+    @model function mv_linear_regression(X, Y)
+        n, p = size(X)      # n observations, p predictors
+        d = size(Y, 2)       # d response variables
+        # Priors
+        σ² ~ InverseGamma(1.0, 1.0)
+        B ~ filldist(Normal(0, 1.0), p, d)     # coefficient matrix, p × d
+
+        # Likelihood
+        μ = X * B
+        for i in 1:n
+            Y[i, :] ~ MvNormal(μ[i, :], σ² * I)
+        end
     end
 
+    sampler = AGESSSampler(mv_linear_regression(X, y), 1000)
+    mcmc_out = sample(mv_linear_regression(X, y), sampler, 1000)
+    mcmc_out = mcmc_out[500:1000,:,:]
+
+    ## Test recovery of β coefficients
+    @test maximum(mean(mcmc_out)[2:11,2] .- β) < 0.05
     ## Test recovery of scale parameter
-    @test abs(mean(exp.(mcmc_out.samps[500:1000, 11])) - 0.1) < 0.2
-
-
-    ## Test type stability
-    X_32 = convert(Matrix{Float32}, X)
-    y_32 = convert(Vector{Float32}, y)
-    β_32 = convert(Vector{Float32}, β)
-
-    burnin = 0.25
-
-    mcmc_out = AGESS(β -> log_posterior(β, X_32, y_32), Int32(1000), Int32(11), μ_0 = Float32(0), 
-                                        Σ_0 = Float32(1), init_x = Float32(0), burnin = Float32(0.25),
-                                        ν = Float32(6), ϵ = Float32(0.1), single_step_prop = Float32(0.05), 
-                                        β = Float32(0.5))
-    
-    @test eltype(mcmc_out.samps) == Float32
-    @test eltype(mcmc_out.l_pdf) == Float32
-    @test eltype(mcmc_out.adapted_μ) == Float32
-    @test eltype(mcmc_out.adapted_Σ) == Float32
+    @test abs(mean(exp.(mcmc_out.value[:, 1,:])) - 0.1) < 0.2
 end

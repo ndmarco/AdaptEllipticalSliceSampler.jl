@@ -205,6 +205,33 @@ function _initial_step(rng::Random.AbstractRNG, model::AbstractMCMC.AbstractMode
     return AGESSTransition(copy(x_current), lpdf_current), state
 end
 
+function AbstractMCMC.step(rng::Random.AbstractRNG, model::AbstractMCMC.AbstractModel, sampler::AGESSSampler; kwargs...)
+    @argcheck _dimension(model) == sampler.P "Sampler was constructed for dimension $(sampler.P) but model has dimension $(_dimension(model))"
+
+    x_current = deepcopy(sampler.init_x)
+    lpdf_current = _logdensity(model, x_current)
+    @argcheck isfinite(lpdf_current) "Initial starting position of Markov chain must have finite posterior density"
+
+    state = AGESSState(
+        x_current,                  # x_current
+        deepcopy(x_current),        # x_next
+        lpdf_current,               # lpdf_current
+        deepcopy(sampler.μ_0),      # μ_adapt
+        cholesky(sampler.Σ_0),      # Σ_chol_adapt
+        deepcopy(sampler.μ_0),      # μ_adapt_ph
+        cholesky(sampler.Σ_0),      # Σ_chol_adapt_ph
+        similar(x_current),         # ph_AGESS
+        similar(x_current),         # z
+        randperm(rng, sampler.P),   # perm
+        similar(x_current),         # ph_cholesky_update
+        1,                          # iteration
+        2,                          # n_j
+        2,                          # N_j
+    )
+
+    return AGESSTransition(copy(x_current), lpdf_current), state
+end
+
 function AbstractMCMC.step(rng::Random.AbstractRNG, model::AbstractMCMC.AbstractModel, sampler::AGESSSampler,
                            state::AGESSState; kwargs...)
 
@@ -215,18 +242,22 @@ function AbstractMCMC.step(rng::Random.AbstractRNG, model::AbstractMCMC.Abstract
 
     if P >= 10
         if i < (burnin_num * sampler.single_step_prop)
+            # if high-dimensional: conduct 1-d updates for faster convergence at the beginning of the chain
             state.lpdf_current = AGESS_single_step_1d!(state.x_current, state.x_next, log_posterior, sampler.t_dist,
                                                         sampler.ν, state.μ_adapt, state.Σ_chol_adapt.L,
                                                         state.lpdf_current, state.perm; rng = rng)
         else
+            # Conduct transition using adaptive kernel
             if rand(rng) > (sampler.ϵ + sampler.single_step_prop)
                 state.lpdf_current = AGESS_single_step!(state.x_current, state.x_next, state.z, log_posterior, sampler.t_dist,
                                                          sampler.ν, P, state.ph_AGESS, state.μ_adapt, state.Σ_chol_adapt.L,
                                                          state.lpdf_current; rng = rng)
+            # Conduct transition using 1-d update
             elseif rand(rng) < (sampler.single_step_prop / (sampler.ϵ + sampler.single_step_prop))
                 state.lpdf_current = AGESS_single_step_1d!(state.x_current, state.x_next, log_posterior, sampler.t_dist,
                                                             sampler.ν, state.μ_adapt, state.Σ_chol_adapt.L,
                                                             state.lpdf_current, state.perm; rng = rng)
+            # Conduct transition using non-adaptive kernel (standard GESS)
             else
                 state.lpdf_current = AGESS_single_step!(state.x_current, state.x_next, state.z, log_posterior, sampler.t_dist,
                                                          sampler.ν, P, state.ph_AGESS, sampler.μ_0, sampler.Σ_0_chol.L,
@@ -234,10 +265,13 @@ function AbstractMCMC.step(rng::Random.AbstractRNG, model::AbstractMCMC.Abstract
             end
         end
     else
+        ## In low dimensions
+        ## Conduct transition using adaptive kernel
         if rand(rng) > sampler.ϵ
             state.lpdf_current = AGESS_single_step!(state.x_current, state.x_next, state.z, log_posterior, sampler.t_dist,
                                                      sampler.ν, P, state.ph_AGESS, state.μ_adapt, state.Σ_chol_adapt.L,
                                                      state.lpdf_current; rng = rng)
+        ## COnduct transition using non-adaptive kernel (standard )
         else
             state.lpdf_current = AGESS_single_step!(state.x_current, state.x_next, state.z, log_posterior, sampler.t_dist,
                                                      sampler.ν, P, state.ph_AGESS, sampler.μ_0, sampler.Σ_0_chol.L,
