@@ -1,4 +1,33 @@
 """
+    _build_chains(samples, param_names, stats, varname_to_symbol)
+
+Shared array/`Chains`-construction logic used by both the generic `bundle_samples` below and
+the `DynamicPPL.Model`-specific override (which needs to unlink each sample's vector to natural
+scale first, but otherwise builds the `Chains` object the same way).
+"""
+function _build_chains(samples::Vector{<:AGESSTransition}, param_names, stats, varname_to_symbol)
+    P = length(samples[1].x)
+    names = param_names === missing ? [Symbol("param_", i) for i in 1:P] : collect(param_names)
+    @argcheck length(names) == P "param_names must have length $(P), got $(length(names))"
+
+    arr = Array{Float64}(undef, length(samples), P + 1, 1)
+    for (i, s) in enumerate(samples)
+        arr[i, 1:P, 1] .= s.x
+        arr[i, P + 1, 1] = s.lpdf
+    end
+
+    info = NamedTuple()
+    if stats !== missing
+        info = merge(info, (start_time = stats.start, stop_time = stats.stop))
+    end
+    if varname_to_symbol !== missing
+        info = merge(info, (varname_to_symbol = varname_to_symbol,))
+    end
+
+    return MCMCChains.Chains(arr, vcat(names, :lp), (internals = [:lp],); info = info)
+end
+
+"""
     bundle_samples(samples, model, sampler, state, ::Type{MCMCChains.Chains}; param_names, kwargs...)
 
 Bundles a vector of `AGESSTransition` into an `MCMCChains.Chains` object, for use with
@@ -16,21 +45,10 @@ function AbstractMCMC.bundle_samples(
     ::Type{MCMCChains.Chains};
     param_names = missing,
     stats = missing,
+    varname_to_symbol = missing,
     kwargs...,
 )
-    P = length(samples[1].x)
-    names = param_names === missing ? [Symbol("param_", i) for i in 1:P] : collect(param_names)
-    @argcheck length(names) == P "param_names must have length $(P), got $(length(names))"
-
-    arr = Array{Float64}(undef, length(samples), P + 1, 1)
-    for (i, s) in enumerate(samples)
-        arr[i, 1:P, 1] .= s.x
-        arr[i, P + 1, 1] = s.lpdf
-    end
-
-    info = stats === missing ? NamedTuple() : (start_time = stats.start, stop_time = stats.stop)
-
-    return MCMCChains.Chains(arr, vcat(names, :lp), (internals = [:lp],); info = info)
+    return _build_chains(samples, param_names, stats, varname_to_symbol)
 end
 
 ### Overload function to have MCMCChains.Chains the default chain type

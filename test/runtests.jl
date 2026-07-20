@@ -45,8 +45,8 @@ using Test, LinearAlgebra, Distributions, Turing
     ## Test using Turing.jl framework ##
     ####################################
     @model function mv_linear_regression(X, Y)
-        n, p = size(X)      # n observations, p predictors
-        d = size(Y, 2)       # d response variables
+        n, p = size(X)                          # n observations, p predictors
+        d = size(Y, 2)                          # d response variables
         # Priors
         σ² ~ InverseGamma(1.0, 1.0)
         B ~ filldist(Normal(0, 1.0), p, d)     # coefficient matrix, p × d
@@ -65,5 +65,5 @@ using Test, LinearAlgebra, Distributions, Turing
     ## Test recovery of β coefficients
     @test maximum(mean(mcmc_out)[2:11,2] .- β) < 0.05
     ## Test recovery of scale parameter
-    @test abs(mean(exp.(mcmc_out.value[:, 1,:])) - 0.1) < 0.2
+    @test abs(mean(mcmc_out.value[:, 1,:]) - 0.01) < 0.02
 end

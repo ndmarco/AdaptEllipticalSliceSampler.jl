@@ -215,7 +215,7 @@ results = AGESS(θ -> transformed_log_posterior(θ, X_train, y_train, W_ph, b_ph
 By plotting the log target density, we can see that our Markov chain appears to converge relatively fast. However, we will conservatively discard the first 50\% of the chain and use the remaining 50\% for inference.
 
 ```@example BayesNN
-plot(results.l_pdf[25:end], label = "log target density")
+plot(results[:lp], label = "log target density")
 vline!([10000], color =:red, label = "burnin")
 ```
 
@@ -294,7 +294,7 @@ for l in 1:(length(arch.sizes) - 1)
 end
 Y_ph1 = zeros(1, n_grid)
 # Use function to get posterior draws
-@views draws, f_means = posterior_predictive_draws(results.samps[10000:end,:], X_grid, W_ph, 
+@views draws, f_means = posterior_predictive_draws(results.value[10000:end,:,1], X_grid, W_ph, 
                                                    b_ph, log_α, H_ph1, Y_ph1, arch)
 
  
@@ -384,7 +384,7 @@ hi_vec = zeros(n_test)
 covered = falses(n_test)
 
 for i in 1:n_test
-    lo, hi = predictive_interval_at(results.samps[10000:end, :], X_test[:, i], W_ph,
+    lo, hi = predictive_interval_at(results.value[10000:end, :, 1], X_test[:, i], W_ph,
                                      b_ph, log_α, H_ph_i, Y_ph_i, arch)
     lo_vec[i] = lo
     hi_vec[i] = hi
@@ -422,7 +422,7 @@ for (li, level) in enumerate(nominal_levels)
     q_lo, q_hi = alpha/2, 1 - alpha/2
     covered_at_level = falses(n_test)
     for i in 1:n_test
-        lo, hi = predictive_interval_at(results.samps[10000:end, :], X_test[:, i], W_ph,
+        lo, hi = predictive_interval_at(results.value[10000:end, :, 1], X_test[:, i], W_ph,
                                          b_ph, log_α, H_ph_i, Y_ph_i, arch;
                                          q=[q_lo, q_hi])
         covered_at_level[i] = (lo <= y_test[1, i] <= hi)
@@ -456,7 +456,7 @@ end
 Y_ph_test = zeros(1, n_test)
 
 @views draws_test, f_means_test = posterior_predictive_draws(
-    results.samps[10000:end, :], X_test, W_ph, b_ph, log_α, H_ph_test, Y_ph_test, arch)
+    results.value[10000:end, :, 1], X_test, W_ph, b_ph, log_α, H_ph_test, Y_ph_test, arch)
 
 # draws_test is n_post_samples x n_test; compute per-point predictive
 # mean/sd from the full (noise-included) posterior predictive draws
@@ -726,7 +726,7 @@ index_f = let idx = 0
     idx
 end
 ### set to posterior median of homogeneous model
-@views θ_init[1:index_f] .= vec(median(results.samps[10000:end,1:index_f], dims = 1))
+@views θ_init[1:index_f] .= vec(median(Matrix(results.value[10000:end,1:index_f,1]), dims = 1))
 
 
 ## run AGESS
@@ -739,9 +739,9 @@ results2 = AGESS(θ -> transformed_log_posterior(θ, X_train, y_train, W_f, W_g,
 As we can see, the Markov chain took significantly longer to converge under this more flexible model.
 
 ```@example BayesNN
-burnin = floor(Int64, results2.params.burnin * results2.params.n_MCMC)
+burnin = floor(Int64, 0.5 * n_MCMC)
 index = collect(25:10:n_MCMC)
-plot(index, results2.l_pdf[index], label = "log target density")
+plot(index, results2[:lp][index], label = "log target density")
 vline!([burnin], color =:red, label = "burnin")
 ```
 
@@ -856,7 +856,7 @@ end
 f1 = zeros(1, n_grid)
 g1 = zeros(1, n_grid)
 # Use function to get posterior draws
-@views draws, f_means = posterior_predictive_draws(results2.samps[burnin:end,:], X_grid, W_f,
+@views draws, f_means = posterior_predictive_draws(results2.value[burnin:end,:,1], X_grid, W_f,
                                                    W_g, b_f, b_g, log_α_f, log_α_g, H_f1, H_g1,
                                                    f1, g1, arch)
 
@@ -986,7 +986,7 @@ hi_vec = zeros(n_test)
 covered = falses(n_test)
 
 for i in 1:n_test
-    lo, hi = predictive_interval_at(results2.samps[burnin:end, :], X_test[:, i], W_f, W_g,
+    lo, hi = predictive_interval_at(results2.value[burnin:end, :, 1], X_test[:, i], W_f, W_g,
                                      b_f, b_g, log_α_f, log_α_g, H_f_i, H_g_i, f1, g1, arch)
     lo_vec[i] = lo
     hi_vec[i] = hi
@@ -1024,7 +1024,7 @@ for (li, level) in enumerate(nominal_levels)
     q_lo, q_hi = alpha/2, 1 - alpha/2
     covered_at_level = falses(n_test)
     for i in 1:n_test
-        lo, hi = predictive_interval_at(results2.samps[burnin:end, :], X_test[:, i], W_f, W_g,
+        lo, hi = predictive_interval_at(results2.value[burnin:end, :, 1], X_test[:, i], W_f, W_g,
                                         b_f, b_g, log_α_f, log_α_g, H_f_i, H_g_i, f1, g1, arch;
                                         q=[q_lo, q_hi])
         covered_at_level[i] = (lo <= y_test[1, i] <= hi)

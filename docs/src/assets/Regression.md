@@ -54,29 +54,11 @@ or (2) we can specify a `Turing.jl` model and directly use that to conduct Bayes
 While one can easily write a function for evaluating the log_posterior density (while making sure
 to transform $\sigma^2$ into an unconstrained space), let's look at how to use AGESS using a
 `Turing.jl` model. Luckily, `Turing.jl` (and the `AdaptEllitpicalSliceSampling.jl` package) will
-automatically transform constrained parameters into an unconstrained space for sampling (and will
-name the transformed variables with informative names!). Thus, in cases where we can use `Turing.jl`,
+automatically transform constrained parameters into an unconstrained space for sampling, then transform
+it back to the original space before returning the chain back to the user. Thus, in cases where we can use `Turing.jl`,
 we can not worry about remembering Jacobians!
 
 ```@example Regression
-#### Here is the code for directly specifying the target just in case anyone is interested
-## function log_posterior(Param::AbstractVector{Y}, X::AbstractMatrix{Y}, 
-##                        y::AbstractVector{Y}) where {Y<: AbstractFloat}
-##     P = length(Param)
-##     ## Normal Likelihood
-##     @views lpdf = -0.5 * (1 / exp(Param[P])) *  norm(X * Param[1:P-1] - y)^2 - 
-##             (0.5 * length(y) * Param[P])
-## 
-##     ## Priors
-##     ## Std Normal prior on coefficients
-##     @views lpdf += -0.5 * norm(Param[1:P-1])^2
-## 
-##     ## IG(1,1) prior on scale parameter (log-transformed)
-##     lpdf += -1 * Param[P]  -  (1 / exp(Param[P]))
-##     
-##     return lpdf
-## end
-
 @model function linear_regression(X::AbstractMatrix{Y}, y::AbstractVector{Y}) where {Y<:AbstractFloat}
     N, D = size(X)
     ## Make sure dimensions conform
@@ -127,7 +109,7 @@ Similarly, we can view the trace plot of $\sigma^2$.
 
 ```@example Regression
 ### Plot trace plot, don't forget to transform the transformed variables back
-plot(exp.(results[:log_σ²]), label = false)
+plot(results[:σ²], label = false)
 ### Plot true value
 hline!([0.25], color = :red, label = false)
 ```
@@ -137,75 +119,6 @@ detect convergence issues.
 
 ```@example Regression
 plot(results[:lp], legend = false)
-```
-
-## Bayesian Generalized Linear Regression
-
-Here we will show an example of Bayesian Poisson regression, where we construct the model 
-directly using the `Turing.jl` probabilistic programming language.
-
-Let's start by first generating some synthetic data.
-
-```@example Regression
-function generate_data_poisson(N::T, D::T, intercept::AbstractFloat) where {T<:Integer}
-    β = randn(D) 
-    x = randn(N, D)
-    y = zeros(Float64, N)
-    for i in 1:N
-        y[i] = rand(Poisson(exp(intercept + dot(β, x[i,:]))))
-    end
-
-    return β, x, y
-end
-
-intercept = 1.0
-D = 4
-N = 250
-
-## Generate Data
-β, X, y = generate_data_poisson(N, D, intercept)
-```
-
-Next, we will construct the model using the `Turing.jl` probabilistic programming language.
-```@example Regression
-@model function poisson_regression(X::AbstractMatrix{Y}, y::AbstractVector{Y}) where {Y<:AbstractFloat}
-    N, D = size(X)
-    ## Make sure dimensions conform
-    @assert length(y) == N
-    
-    ## Start with priors
-    intercept ~ Normal(0.0, 1.0)
-    β ~ MvNormal(zeros(D), I)
-
-    for i in 1:N
-        y[i] ~ LogPoisson(intercept + dot(β, X[i,:]))
-    end
-end;
-
-model = poisson_regression(X, y)
-```
-
-We have now constructed our model in the using `Turing.jl`, making it extremely simple to use AGESS to
-conduct MCMC.
-
-```@example Regression
-n_MCMC = 10_000
-sampler = AGESSSampler(model, n_MCMC)
-results = sample(model, sampler, n_MCMC)
-```
-Using the `describe()` function, we can assess the results of the MCMC.
-```@example Regression
-## Discard samples due to burn-in
-results = results[2501:end, :,:]
-describe(results)
-```
-We can view the trace plots by using the `plot()` function, along with the true values.
-```@example Regression
-plot(results)
-### Plot true values, one per coefficient's own subplot
-true_vals = [intercept; β]
-hline!(reshape(true_vals, 1, :), subplot = reshape(1:2:2*length(true_vals), 1, :),
-       color = :red, linestyle = :dash)
 ```
 
 ## High-Dimensional Sparse Linear Regression
@@ -259,7 +172,7 @@ Random.seed!(123)
 N = 50
 D = 25
 
-X, Y, β = gen_data_AR1(N, D, ρ = 0.7, sparsity = 0.9, σ_sq = 1.0)
+X, y, β = gen_data_AR1(N, D, ρ = 0.7, sparsity = 0.9, σ_sq = 1.0)
 ```
 
 We visualize the correlation structure of the design matrix.
@@ -274,88 +187,81 @@ We can also view the values of $\boldsymbol{\beta}$.
 scatter(β,legend = false)
 ```
 
-### Specification of the Log Posterior Density
+### Specification of the Model
 
-When using the `AdaptEllipticalSliceSampler.jl`, it is crucial that we construct a function
-that can efficiently evaluate the log posterior density. We will first start by constructing two
-functions that evaluate the priors on $\boldsymbol{\beta}$ and $\boldsymbol{\lambda}$. Since
-$\lambda_j$ has positive support, we will take a log transformation of the $\lambda_j$ parameters
-($j = 1, \dots, D$). Similarly, we will take a log transformation of $\tau$ and $\sigma$.
+While we could directly specify a function evaluating the log posterior density (remembering to
+log-transform $\tau$ and $\lambda$), we will instead simply specify the model using the `Turing.jl`
+framework.
 
 ```@example Regression
-function prior_β(β::AbstractVector{Y}, τ::Y, λ::AbstractVector{Y}, 
-                 σ::Y) where {Y<:AbstractFloat}
-  lpdf::Float64 = 0.0
-  for i in eachindex(β)
-      @views lpdf += logpdf(Normal(0.0, exp(σ) * exp(τ) * exp(λ[i])), β[i])
-  end
-  return lpdf
+@model function HS_regression(X::AbstractMatrix{Y}, y::AbstractVector{Y}) where {Y<:AbstractFloat}
+    N,D = size(X)
+    @assert length(y) == N
+
+    ## Define Half-Cauchy distribution
+    half_cauchy = truncated(Cauchy(0, 1); lower=0)
+
+    ## Priors
+    τ ~ half_cauchy                 # Global Shrinkage param
+    λ ~ filldist(half_cauchy, D)    # Local Shrinkage param
+    log_σ² ~ Flat()                 # Flat prior to create Jeffrey's prior
+    σ² = exp(log_σ²)                
+    β ~ MvNormal(zeros(D), σ² .* Diagonal((λ .* τ).^2))   
+
+    ## Likelihood
+    y ~ MvNormal(X * β, σ² * I)
 end
 
-function prior_λ(λ::AbstractVector{Y}) where {Y<:AbstractFloat}
-  lpdf::Float64 = 0.0
-  cauchy_d = Cauchy(0.0,1.0)
-  for i in eachindex(λ)
-      @views lpdf += logpdf(cauchy_d, exp(λ[i])) + λ[i]
-  end
-  return lpdf
-end
-```
-
-Using these two functions, we can specify a function evaluating the log pdf of the target distribution
-of interest. We will concatenate all the parameters into one vector $\text{Param} = [\boldsymbol{\beta}, \log(\boldsymbol{\lambda}), \log(\tau), \log(\sigma)]$.
-
-```@example Regression
-function log_posterior_HD(Param::AbstractVector{Y}, X::AbstractMatrix{Y}, 
-                          y::AbstractVector{Y}, D::T) where {Y<:AbstractFloat, T<:Integer}
-  lpdf::Float64 = 0.0
-  ## Likelihood
-  for i in eachindex(y)
-    @views lpdf += logpdf(Normal(dot(X[i,:], Param[1:D]), exp(Param[2*D + 2])), y[i])
-  end
-  ## Prior 
-  lpdf += prior_β(Param[1:D], Param[2*D + 1], Param[(D + 1):2*D], Param[2*D + 2]) + 
-            prior_λ(Param[(D + 1):2*D]) + logpdf(Cauchy(0.0,1.0), exp(Param[2*D + 1])) + Param[2*D + 1]
-
-  return lpdf
-end
+model = HS_regression(X, y)
 ```
 
 ### Running AGESS
 
-Now that we have specified a function to efficiently evaluate the log posterior density, we can 
-use the `AGESS` function to generate samples from the posterior distribution. Similarly to before, 
-we will specify an anonymous function with $\text{Param}$ as the only input to the function 
-`log_posterior_HD`, using the global parameter values for $\mathbf{X}$, $\mathbf{y}$, and $D$.
+Similarly to before, once we have constructed the model, we can sample by simply calling two
+functions.
 
 ```@example Regression
-### Specify the dimension of the target distribution
-P = 2*D + 2
 ### Specify the number of MCMC iterations
 n_MCMC = 100_000
 
 ### Run AGESS
-results = AGESS(Param -> log_posterior_HD(Param, X, Y, D), n_MCMC, P)
+sampler = AGESSSampler(model, n_MCMC)
+results = sample(model, sampler, n_MCMC)
 ```
 
 After running `AGESS`, we can view the trace plots of the non-zero coefficients.
 
 ```@example Regression
-plot(results.samps[25001:10:end, findall(β .!= 0)], legend = false)
+## Discard initial 25% of chain due to burn-in
+results = results[25_001:end,:,:]
+
+# Get β parameters
+β_samps = get(results, :β)
+p = plot()
+for i in findall(β .!= 0)
+    p = plot!(β_samps.β[i][1:10:end], legend = false)
+end
+
+p
 hline!(β[findall(β .!= 0)], line = :dash, color =:black)
 ```
 
 We can also view the trace plots of the coefficients that are equal to zero.
 
 ```@example Regression
-plot(results.samps[25001:10:end, findall(β .== 0)], legend = false)
-hline!(β[findall(β .== 0)], line = :dash, color =:black)
+p = plot()
+for i in findall(β .== 0)
+    p = plot!(β_samps.β[i][1:10:end], legend = false)
+end
+
+p
+hline!([0.0], line = :dash, color =:black)
 ```
 
 Next we will view the trace plot of $\sigma^2$.
 
 ```@example Regression
-plot(exp.(results.samps[25001:10:end, 2*D + 2]).^2, legend = false)
+plot(exp.(results[:log_σ²][1:10:end]), legend = false)
 hline!([1], line = :dash, color =:black)
 ```
 
@@ -363,7 +269,7 @@ Lastly, we can plot the log pdf of the posterior at every iteration of the Marko
 detect convergence issues.
 
 ```@example Regression
-plot(results.l_pdf[1:n_MCMC], legend = false)
+plot(results[:lp], legend = false)
 ```
 
 ## Generalized ReLU Regression
@@ -444,17 +350,24 @@ use the `AGESS` function to generate samples from the posterior distribution.
 ### Specify the dimension of the target distribution
 P = D
 ### Specify the number of MCMC iterations
-n_MCMC = 10000
+n_MCMC = 10_000
 
+## Let's specify the param_names this time
+param_names = [string("β_",i) for i in 1:D]
 ### Run AGESS
-results = AGESS(β -> log_posterior_ReLU(β, x, y), n_MCMC, P)
+results = AGESS(β -> log_posterior_ReLU(β, x, y), n_MCMC, P; param_names = param_names)
+```
+
+```@example Regression
+# Discard the initial 2500 samples to burnin
+results = results[2501:end,:,:]
+describe(results)
 ```
 
 Using the output of `AGESS`, we can visualize the samples from the target distribution.
 
 ```@example Regression
-# Discard the initial 2500 samples to burnin
-scatter(results.samps[2501:10000, 1], results.samps[2501:10000, 2], alpha = 0.1, 
+scatter(results[:β_1], results[:β_2], alpha = 0.1, 
         legend = false)
 scatter!([β[1]], [β[2]], color = "red")
 ```
@@ -463,7 +376,7 @@ Additionally, we can plot the log pdf of the posterior at every iteration of the
 detect convergence issues.
 
 ```@example Regression
-plot(results.l_pdf[1:n_MCMC], legend = false)
+plot(results[:lp], legend = false)
 ```
 
 

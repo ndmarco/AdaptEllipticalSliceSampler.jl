@@ -1,6 +1,6 @@
 module AdaptEllipticalSliceSamplerDynamicPPLExt
 
-using AdaptEllipticalSliceSampler: AdaptEllipticalSliceSampler, AGESSSampler
+using AdaptEllipticalSliceSampler: AdaptEllipticalSliceSampler, AGESSSampler, AGESSTransition
 using DynamicPPL: DynamicPPL
 using LogDensityProblems: LogDensityProblems
 using AbstractMCMC: AbstractMCMC
@@ -22,7 +22,7 @@ const _LDF_CACHE = IdDict{DynamicPPL.Model, DynamicPPL.LogDensityFunction}()
 
 function _get_ldf(model::DynamicPPL.Model)
     return get!(_LDF_CACHE, model) do
-        DynamicPPL.LogDensityFunction(model, DynamicPPL.getlogjoint, DynamicPPL.LinkAll())
+        DynamicPPL.LogDensityFunction(model, DynamicPPL.getlogjoint_internal, DynamicPPL.LinkAll())
     end
 end
 
@@ -35,68 +35,94 @@ function AdaptEllipticalSliceSampler._dimension(model::DynamicPPL.Model)
 end
 
 """
-Classifies the transform applied to a single scalar component by comparing its natural-scale
-and linked-scale values behaviorally (rather than introspecting bijector types, which keeps
-breaking across DynamicPPL versions): identity, `log` (positive support), `logit` (unit
-interval), or an unrecognized transform.
+Builds default `param_names` (bare Turing variable names) and a `varname_to_symbol` map
+(`VarName => column Symbol`) for a `DynamicPPL.Model`, for `chain.info` — this is what makes
+`chain[@varname(...)]`-style access (via DynamicPPL's internal helpers), `DynamicPPL.returned`,
+`predict`, etc. work on the resulting chain. Only scalar (single-element) variables get a
+`varname_to_symbol` entry: constructing the correct *leaf* `VarName` for a multi-element
+variable (e.g. `x[1]`) requires AbstractPPL's optic/lens API, which has changed shape across
+versions in ways that make it too unstable to rely on here — those variables still get
+`Symbol`-suffixed columns (`x[1]`, `x[2]`, ...), just not `VarName`-indexable ones.
 """
-function _transform_prefix(natural::Real, linked::Real; atol = 1e-6, rtol = 1e-6)
-    isapprox(natural, linked; atol = atol, rtol = rtol) && return ""
-    natural > 0 && isapprox(linked, log(natural); atol = atol, rtol = rtol) && return "log_"
-    if 0 < natural < 1
-        isapprox(linked, log(natural / (1 - natural)); atol = atol, rtol = rtol) && return "logit_"
-    end
-    return "transformed_"
-end
-
-
-
-"""
-Builds default `param_names` for a `DynamicPPL.Model`, prefixing each variable with `log_`,
-`logit_`, or a generic `transformed_` marker when it's on the linked (unconstrained) scale, so
-column names reflect what's actually stored rather than silently mislabeling e.g. `log(s2)` as
-`s2`. Runs the model twice (once unlinked, once linked) with an identically-seeded RNG in an
-isolated `Task`, so the two draws correspond to the same underlying values without touching the
-user's own RNG state.
-"""
-function _default_param_names(model::DynamicPPL.Model)
-    x_unlinked, x_linked, ranges_and_transforms = fetch(Threads.@spawn begin
-        Random.seed!(0)
-        ldf_u = DynamicPPL.LogDensityFunction(model, DynamicPPL.getlogjoint, DynamicPPL.UnlinkAll())
-        xu = DynamicPPL.get_sample_input_vector(ldf_u)
-        Random.seed!(0)
-        ldf_l = DynamicPPL.LogDensityFunction(model, DynamicPPL.getlogjoint, DynamicPPL.LinkAll())
-        xl = DynamicPPL.get_sample_input_vector(ldf_l)
-        (xu, xl, DynamicPPL.get_all_ranges_and_transforms(ldf_u))
-    end)
+function _default_param_names_and_varname_map(model::DynamicPPL.Model)
+    ranges_and_transforms = DynamicPPL.get_all_ranges_and_transforms(_get_ldf(model))
 
     names = Symbol[]
+    varname_to_symbol = Dict{DynamicPPL.VarName, Symbol}()
     for (vn, rt) in pairs(ranges_and_transforms)
         r = rt.range
         base = string(vn)
-        prefix = _transform_prefix(x_unlinked[first(r)], x_linked[first(r)])
         if length(r) == 1
-            push!(names, Symbol(prefix, base))
+            sym = Symbol(base)
+            push!(names, sym)
+            varname_to_symbol[vn] = sym
         else
             for k in 1:length(r)
-                push!(names, Symbol(prefix, base, "[", k, "]"))
+                push!(names, Symbol(base, "[", k, "]"))
             end
         end
     end
-    return names
+    return names, varname_to_symbol
 end
 
-# Call the sample function using a DynamicPPL (Turing) model; extracting out the parameter names
+"""
+Maps a sample's flat *linked* (unconstrained) vector back to its natural scale, using
+`DynamicPPL.InitFromVector` + `UnlinkAll()` — the same machinery Turing itself uses so that
+user-facing chains always hold natural-scale values, even though `AGESSSampler` walked
+unconstrained space internally (e.g. `log(s2)`, not `s2`).
+"""
+function _unlink_vector(model::DynamicPPL.Model, x_linked::AbstractVector)
+    ldf_linked = _get_ldf(model)
+    init_strategy = DynamicPPL.InitFromVector(x_linked, ldf_linked)
+    oavi = DynamicPPL.OnlyAccsVarInfo(DynamicPPL.VectorValueAccumulator())
+    _, oavi_natural = DynamicPPL.init!!(model, oavi, init_strategy, DynamicPPL.UnlinkAll())
+    ldf_natural = DynamicPPL.LogDensityFunction(model, DynamicPPL.getlogjoint, oavi_natural)
+    return DynamicPPL.get_sample_input_vector(ldf_natural)
+end
+
+"""
+Bundles a `DynamicPPL.Model` run into an `MCMCChains.Chains` object with natural-scale values
+and (for scalar variables) `VarName`-indexable metadata — unlinking each `AGESSTransition`'s
+vector before handing off to the shared `_build_chains` logic. `param_names`/`varname_to_symbol`
+are auto-derived from the model unless the caller supplies their own `param_names`, in which
+case we can't safely correlate custom names back to `VarName`s, so that metadata is skipped.
+"""
+function AbstractMCMC.bundle_samples(
+    samples::Vector{<:AGESSTransition},
+    model::DynamicPPL.Model,
+    sampler::AGESSSampler,
+    state,
+    ::Type{MCMCChains.Chains};
+    param_names = nothing,
+    stats = missing,
+    kwargs...,
+)
+    unlinked_samples = [AGESSTransition(_unlink_vector(model, s.x), s.lpdf) for s in samples]
+
+    if param_names === nothing
+        names, varname_to_symbol = _default_param_names_and_varname_map(model)
+        return AdaptEllipticalSliceSampler._build_chains(unlinked_samples, names, stats, varname_to_symbol)
+    else
+        return AdaptEllipticalSliceSampler._build_chains(unlinked_samples, param_names, stats, missing)
+    end
+end
+
+# Turing itself defines `sample(rng, model::DynamicPPL.Model, spl::AbstractSampler, N; ...)`
+# (with its own `chain_type` default of `VNChain`, which doesn't apply to AGESSSampler since
+# our transitions are plain vectors, not VarName-tagged). That method and our own
+# `sample(rng, model::AbstractMCMC.AbstractModel, sampler::AGESSSampler, N; ...)` override
+# (see MCMCChains_interface.jl) are equally specific for this combination, so calling
+# `sample(rng, turing_model, AGESSSampler(...), N)` is ambiguous unless we add a strictly
+# more specific method here to resolve it in favor of our own `MCMCChains.Chains` default.
 function AbstractMCMC.sample(
     rng::Random.AbstractRNG,
     model::DynamicPPL.Model,
     sampler::AGESSSampler,
     N::Integer;
     chain_type::Type = MCMCChains.Chains,
-    param_names = _default_param_names(model),
     kwargs...,
 )
-    return AbstractMCMC.mcmcsample(rng, model, sampler, N; chain_type = chain_type, param_names = param_names, kwargs...)
+    return AbstractMCMC.mcmcsample(rng, model, sampler, N; chain_type = chain_type, kwargs...)
 end
 
 # Overloading the function to allow the user to use the default rng

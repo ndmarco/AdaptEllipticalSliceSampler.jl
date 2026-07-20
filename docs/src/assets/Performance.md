@@ -5,7 +5,7 @@ Julia features optional typing can lead to slow performance. Since the `AGESS` f
 only requires the user to specify a function evaluating the log target distribution, it is 
 paramount that the user specifies an efficient implementation of this function, as this function 
 will constantly be called in the `AGESS` function. Here, we will give a quick example of 3 
-evaluations of the same target distribution; each leading to completely different computational
+evaluations of the same target distribution; each leading to different computational
 costs. While a full guide to writing performance oriented code in Julia is out of the scope 
 of this documentation, here are some useful resources:
 
@@ -16,6 +16,14 @@ of this documentation, here are some useful resources:
 * [JET.jl](https://aviatesk.github.io/JET.jl/dev/)
 
 * [BenchmarkTools.jl](https://juliaci.github.io/BenchmarkTools.jl/stable/)
+
+## Use of Turing Models
+
+As of version 0.2.0, users are able to specify a [Turing.jl](https://turinglang.org/) model instead of supplying a 
+function that efficiently evaluates the log posterior density. Thus, we refer users to the `Turing.jl`
+documentation for tips on improving performance.
+
+  * [Performance Tips for Turing.jl](https://turinglang.org/docs/usage/performance-tips/)
 
 ## Linear Regression
  
