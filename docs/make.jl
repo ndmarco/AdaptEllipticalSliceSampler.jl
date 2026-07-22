@@ -7,6 +7,7 @@ makedocs(
     modules = [AdaptEllipticalSliceSampler],
     pages = [
         "Introduction" => "index.md",
+        "Why AGESS?" => "assets/Motivation.md",
         "Installation" => "assets/install.md",
         "Documentation" => "assets/Documentation.md",
         "Performance Tips" => "assets/Performance.md",

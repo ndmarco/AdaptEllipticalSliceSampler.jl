@@ -1,7 +1,7 @@
 name = "AdaptEllipticalSliceSampler"
 uuid = "630fce29-b4bc-4795-b1a0-7c5b858f73a1"
 authors = ["Nicholas Marco <nicholas.marco@duke.edu>", "Surya T. Tokdar"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 AbstractMCMC = "80f14c24-f653-4e6a-9b94-39d6b0f70001"

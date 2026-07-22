@@ -47,13 +47,13 @@ D = 10
 
 We can see that we generated the data from our model under $\sigma = 0.5$ ($N = 1000$, $D = 10$). 
 As of version 0.2.0 of `AdaptEllipticalSliceSampler.jl`, the package is now integrated into the 
-`abstractMCMC.jl` framework, allowing us to utilize the 
+`AbstractMCMC.jl` framework, allowing us to utilize the 
 [Turing ecosystem](https://turinglang.org/docs/getting-started/index.html).
 Thus, we have two options: (1) we can write a function that calculates the log posterior density
 or (2) we can specify a `Turing.jl` model and directly use that to conduct Bayesian computation.
 While one can easily write a function for evaluating the log_posterior density (while making sure
 to transform $\sigma^2$ into an unconstrained space), let's look at how to use AGESS using a
-`Turing.jl` model. Luckily, `Turing.jl` (and the `AdaptEllitpicalSliceSampling.jl` package) will
+`Turing.jl` model. Luckily, `Turing.jl` (and the `AdaptEllipticalSliceSampler.jl` package) will
 automatically transform constrained parameters into an unconstrained space for sampling, then transform
 it back to the original space before returning the chain back to the user. Thus, in cases where we can use `Turing.jl`,
 we can not worry about remembering Jacobians!

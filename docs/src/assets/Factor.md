@@ -177,19 +177,20 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
     P = size(Y_obs)[2]
     n_params = (N * K) + (K * P) + P
 
-    ### Set up variables
+    ## Initialize Markov Chains
     x = zeros(n_MCMC, n_params)
     ϕ = ones(n_MCMC, K, P)
     δ = ones(n_MCMC, K)
 
-
-    ## Allocate variables for AGESS
-    ph_AGESS = zeros(n_params)
-    z = similar(ph_AGESS)
+    ## Create current state and next state to be used in AGESS 
+    x_current = zeros(n_params)
+    x_next = zeros(n_params)
+    z = similar(x_current)
+    ph_AGESS = similar(x_current)
     w_const = max(2/3, ((cbrt(n_params) - 1) / cbrt(n_params)))
     N_J = 2
     n_j = 2
-    ph_cholesky_update = ones(n_params)
+    ph_cholesky_update = zeros(n_params)
 
     perm = randperm(n_params)
 
@@ -214,48 +215,49 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
 
     ### variable for storing log posterior pdf
     lpdf = zeros(n_MCMC)
-    @views lpdf[1] = transform_posterior(x[1,:], Y_obs, ϕ[1,:,:], δ[1,:], τ_ph, a, 
-                                         b, N, P, K, D_ph, ph, ph1)
+    lpdf[1] = transform_posterior(x_current, Y_obs, ϕ[1,:,:], δ[1,:], τ_ph, a, 
+                                  b, N, P, K, D_ph, ph, ph1)
+    x[1,:] .= x_current
+
+    burnin_num = floor(Int, burnin * n_MCMC)
 
     ### Start MCMC
     for i in 2:n_MCMC
+        ## Function evaluated at the current values of ϕ and ϕ, needed for AGESS
+        log_posterior(y) = transform_posterior(y, Y_obs, ϕ[i,:,:], ϕ[i,:], τ_ph, a, 
+                                               b, N, P, K, D_ph, ph, ph1)
+
         ### AGESS update
-        if i < (n_MCMC * burnin)
+        if i < burnin_num
             ### 1-d AGESS updates for fast burn-in
-            @views lpdf[i] = AGESS_single_step_1d!(x, y -> transform_posterior(y, Y_obs, 
-                                                   ϕ[i,:,:], δ[i,:], τ_ph, a, 
-                                                   b, N, P, K, D_ph, ph, ph1), true, 6.0, 
-                                                   n_params, μ_adapt, 
-                                                   Σ_chol_adapt.L, lpdf[i-1], perm, i)
+            lpdf[i] = AGESS_single_step_1d!(x_current, x_next, log_posterior, true, 6.0, 
+                                            μ_adapt, Σ_chol_adapt.L, lpdf[i-1], perm)
         else
             if rand() > (ϵ + single_step_prop)
                 ### standard AGESS step
-                @views lpdf[i] = AGESS_single_step!(x, z, y -> transform_posterior(y, Y_obs, 
-                                                    ϕ[i,:,:], δ[i,:], τ_ph, a, 
-                                                    b, N, P, K, D_ph, ph, ph1), true, 6.0, 
-                                                    n_params, ph_AGESS, μ_adapt, 
-                                                    Σ_chol_adapt.L, lpdf[i-1], i)
+                lpdf[i] = AGESS_single_step!(x_current, x_next, z, log_posterior, true, 6.0, 
+                                             n_params, ph_AGESS, μ_adapt, 
+                                             Σ_chol_adapt.L, lpdf[i-1])
             elseif rand() < (single_step_prop / (ϵ + single_step_prop))
                 ### AGESS updates with only 1-d updates
-                @views lpdf[i] = AGESS_single_step_1d!(x, y -> transform_posterior(y, Y_obs, 
-                                                       ϕ[i,:,:], δ[i,:], τ_ph, a, 
-                                                       b, N, P, K, D_ph, ph, ph1), true, 6.0, 
-                                                       n_params, μ_adapt, 
-                                                       Σ_chol_adapt.L, lpdf[i-1], perm, i)
+                lpdf[i] = AGESS_single_step_1d!(x_current, x_next, log_posterior, true, 6.0, 
+                                                μ_adapt, Σ_chol_adapt.L, lpdf[i-1], perm)
             else
                 ### Non-adaptive update
-                @views lpdf[i] = AGESS_single_step!(x, z, y -> transform_posterior(y, Y_obs, 
-                                                    ϕ[i,:,:], δ[i,:], τ_ph, a, 
-                                                    b, N, P, K, D_ph, ph, ph1), true, 6.0, 
-                                                    n_params, ph_AGESS, μ_0, 
-                                                    Σ_chol_0.L, lpdf[i-1], i)
+                lpdf[i] = AGESS_single_step!(x_current, x_next, z, log_posterior, true, 6.0, 
+                                             n_params, ph_AGESS, μ_0, 
+                                             Σ_chol_0.L, lpdf[i-1])
             end
         end
 
+        ### Ping-pong the current/next state vectors, then record history
+        x_current, x_next = x_next, x_current
+        x[i,:] .= x_current
+
         ### Update variables
-        @views Λ_ph = reshape(x[i, 1:K*P], (K, P))
-        @views η_ph = reshape(x[(K*P + 1):(N*K + K*P)], (N, K))
-        @views D_ph[diagind(D_ph)] .= exp.(x[(N*K + K*P + 1):(N*K + K*P + P)])
+        @views Λ_ph = reshape(x_current[1:K*P], (K, P))
+        @views η_ph = reshape(x_current[(K*P + 1):(N*K + K*P)], (N, K))
+        @views D_ph[diagind(D_ph)] .= exp.(x_current[(N*K + K*P + 1):(N*K + K*P + P)])
 
         ### Gibbs Updates
         @views phi_sampler!(ϕ[i,:,:], δ[i,:], Λ_ph, ν)
@@ -264,28 +266,27 @@ function custom_MCMC(Y_obs::AbstractMatrix{Y}, K::T, n_MCMC::T, a_1::Y, a_2::Y, 
         ### Update Adaptive Scheme
         w_i = i^(-w_const)
         Σ_chol_adapt_ph.U .= sqrt((1 - w_i)) .*  Σ_chol_adapt_ph.U
-        @views ph_cholesky_update .= sqrt(w_i) .* (x[i,:] .- μ_adapt_ph)
+        ph_cholesky_update .= sqrt(w_i) .* (x_current .- μ_adapt_ph)
         lowrankupdate!(Σ_chol_adapt_ph, ph_cholesky_update)
-        @views μ_adapt_ph .= (1 - w_i) * μ_adapt_ph +  w_i * x[i,:]
+        μ_adapt_ph .= (1 - w_i) * μ_adapt_ph +  w_i * x_current
             
-        ## Adapt mean and covariance according to AIRMCMC
+        ## Adapt mean and covariance according to AirMCMC
         if i == N_J
             Σ_chol_adapt.U .= Σ_chol_adapt_ph.U
-            @views μ_adapt .= μ_adapt_ph
+            μ_adapt .= μ_adapt_ph
             n_j += 1
             N_J += floor(n_j^β)
         end
 
-        ### Update next state
+        ### Carry Gibbs-block state forward to next iteration
         if i < n_MCMC
-            @views x[i+1,:] .= x[i,:]
             @views ϕ[i+1,:,:] .= ϕ[i,:,:]
             @views δ[i+1,:] .= δ[i,:]
         end
 
         ### rerun evaluation of posterior density after gibbs updates
-        @views lpdf[i] = transform_posterior(x[i,:], Y_obs, ϕ[i,:,:], δ[i,:], τ_ph, a, b, N, 
-                                             P, K, D_ph, ph, ph1)
+        lpdf[i] = transform_posterior(x_current, Y_obs, ϕ[i,:,:], δ[i,:], τ_ph, a, b, N, 
+                                      P, K, D_ph, ph, ph1)
         ### Print statement
         if (i % 100) == 0
             @views println("MCMC iter: ", i, "  lpdf = ", mean(lpdf[i-99:i]))
@@ -483,14 +484,17 @@ We can extract the parameters using the following code.
 D_samp2 = zeros(n_MCMC, P, P)
 δ_samp2 = zeros(n_MCMC, K)
 ϕ_samp2 = zeros(n_MCMC, K, P)
+
+## `results` is an `MCMCChains.Chains`; `.value` is the underlying iter × var × chain array
+samps = results.value
 for i in 1:n_MCMC
-    @views Λ_samp2[i,:,:] .= reshape(results.samps[i, 1:K*P], (K, P))
-    @views η_samp2[i,:,:] .= reshape(results.samps[i, (K*P + 1):(N*K + K*P)], (N, K))
+    @views Λ_samp2[i,:,:] .= reshape(samps[i, 1:K*P, 1], (K, P))
+    @views η_samp2[i,:,:] .= reshape(samps[i, (K*P + 1):(N*K + K*P), 1], (N, K))
     for j in 1:P
-        D_samp2[i,j,j] = exp(results.samps[i, (N*K + K*P + j)])
+        D_samp2[i,j,j] = exp(samps[i, (N*K + K*P + j), 1])
     end
-    @views ϕ_samp2[i,:,:] .= reshape(exp.(results.samps[i, (N*K + K*P + P + 1):(N*K + 2*K*P + P)]), (K, P))
-    @views δ_samp2[i,:] .= exp.(results.samps[i, (N*K + 2*K*P + P + 1):(N*K + 2*K*P + P + K)])
+    @views ϕ_samp2[i,:,:] .= reshape(exp.(samps[i, (N*K + K*P + P + 1):(N*K + 2*K*P + P), 1]), (K, P))
+    @views δ_samp2[i,:] .= exp.(samps[i, (N*K + 2*K*P + P + 1):(N*K + 2*K*P + P + K), 1])
 end
 ```
 

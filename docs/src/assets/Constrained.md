@@ -74,7 +74,7 @@ end
 plot(circleShape(), ylims=(-1.5, 1.5), xlims=(-1.5, 1.5), legend=false)
 
 scatter!([β[1]], [β[2]], color="red")
-scatter!(results.samps[1000:end,1], results.samps[1000:end,2], alpha = 0.4)
+scatter!(results.value[1000:end,1,:], results.value[1000:end,2,:], alpha = 0.4)
 ```
 
 In the figure above, we can see that the red point is the true unconstrained $\boldsymbol{\beta}$,

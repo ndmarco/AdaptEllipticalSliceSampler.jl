@@ -22,7 +22,7 @@ using AdaptEllipticalSliceSampler
 using Distributions
 using Plots
 using LinearAlgebra
-using Turing, MCMCChains, StatsPlots
+using MCMCChains
 
 Random.seed!(123)
 
@@ -85,7 +85,7 @@ scatter(results[:,1,1], results[:,2,1], legend = false)
 
 Additionally, we can look at the plot of the log posterior density evaluated at each iteration of the Markov chain:
 ```@example Banana
-## Note this is results[:1p] can also be called by results[:,3,1]
+## Note this is results[:lp] can also be called by results[:,3,1]
 plot(results[:lp], legend = false)
 ```
 
@@ -156,7 +156,7 @@ describe(results_TB)
 
 Similarly to before, we can view the MCMC samples. This time we will call them by the variable names, which
 are by default $\text{param_1},\dots,\text{param_P}$ unless specified through the `param_names` argument
-when calling `AEGSS`.
+when calling `AGESS`.
 
 ```@example Banana
 ## Note the 3rd dimension is used when you run multiple chains in parallel

@@ -321,7 +321,7 @@ ylabel!(p1, "Residuary resistance")
 title!(p1, "Posterior predictive: BNN fit to Yacht data")
 ```
 
-By looking at this plot, we can see that there is very little variability in the residual resistance when the Froude number is small; however, the variability increases as the Froude number increases. Thus, the predictive intervals look too wide when the Froude number is small, and too narrow when the Froude number is big. However, it is important to recall that this is a view of the conditional posterior predictive distribution (conditional on all other covariates at their mean value). Thus, it is possible that perhaps the other variables can explain the increased variability observed at high Froude numbers. Therefore, lets look at the posterior predictive coverage on the test dataset to get a better sense of what is happening.
+By looking at this plot, we can see that there is very little variability in the residual resistance when the Froude number is small; however, the variability increases as the Froude number increases. Thus, the predictive intervals look too wide when the Froude number is small, and too narrow when the Froude number is big. However, it is important to recall that this is a view of the conditional posterior predictive distribution (conditional on all other covariates at their mean value). Thus, it is possible that perhaps the other variables can explain the increased variability observed at high Froude numbers. Therefore, let's look at the posterior predictive coverage on the test dataset to get a better sense of what is happening.
 
 ```@example BayesNN
 function predictive_interval_at(post_samples::AbstractMatrix{Y}, x_i::AbstractVector{Y},
@@ -446,7 +446,7 @@ p_combined = plot(p_coverage, p_calib, layout=(1,2), size=(1100,450),
 display(p_combined)
 ```
 
-From the graphs above, we can see that we are overly conservative in our coverage, especially when looking at smaller credible intervals (i.e., 50 - 70% credible intervals). Recall that our model assumes a homoskedastic error term ($1/\beta$). Lets first check to see if a homoskedastic error term $\beta$ is appropriate in this setting by plotting the residual values against the Froude number.
+From the graphs above, we can see that we are overly conservative in our coverage, especially when looking at smaller credible intervals (i.e., 50 - 70% credible intervals). Recall that our model assumes a homoskedastic error term ($1/\beta$). Let's first check to see if a homoskedastic error term $\beta$ is appropriate in this setting by plotting the residual values against the Froude number.
 
 ```@example BayesNN
 H_ph_test = Vector{Matrix{Float64}}(undef, length(arch.sizes) - 1)
@@ -669,7 +669,7 @@ end
 
 ### Run AGESS
 
-Now that we have constructed the necessary functions, lets consider a heteroskedastic neural network with the same architecture for the mean function as before ($n_0 = 6,
+Now that we have constructed the necessary functions, let's consider a heteroskedastic neural network with the same architecture for the mean function as before ($n_0 = 6,
 n_1 = 8, n_2 = 10, n_{\text{out}} = 1$) and a relatively shallow and narrow neural network to capture the heterogeneity of the error terms ($n_0 = 6, n_1 = 6, n_{\text{out}} = 1$). Since the variance is a second-order statistic, and thus requires more data in order to learn, it is reasonable to restrict the class of functions to less complex functions by having a more shallow and narrow neural network compared to the mean function. 
 
 ```@example BayesNN
@@ -747,7 +747,7 @@ vline!([burnin], color =:red, label = "burnin")
 
 ### Posterior Predictive Distributions
 
-Lets compare the posterior predictive distributions under the heteroskedastic model to the homoskedastic model.
+Let's compare the posterior predictive distributions under the heteroskedastic model to the homoskedastic model.
 
 ```@example BayesNN
 # Function for generating posterior predictive draws
@@ -884,7 +884,7 @@ ylabel!(p1, "Residuary resistance")
 title!(p1, "Posterior predictive: BNN fit to Yacht Hydrodynamics data")
 ```
 
-Compared to before, we can see that predictive intervals are much narrower when the Froude number is small, and grows with Froude number. However, we can see that even when the Froude number is larger ($ > 1.5$), the predictive interval is narrower compared to the homoskedastic model. Again, one has to remember that this is a view of the conditional predictive distribution, and that all predictor values can influence the width of the predictive intervals. To get a better sense of the calibration, lets again look at the coverage under the test set.
+Compared to before, we can see that predictive intervals are much narrower when the Froude number is small, and grows with Froude number. However, we can see that even when the Froude number is larger ($ > 1.5$), the predictive interval is narrower compared to the homoskedastic model. Again, one has to remember that this is a view of the conditional predictive distribution, and that all predictor values can influence the width of the predictive intervals. To get a better sense of the calibration, let's again look at the coverage under the test set.
 
 ```@example BayesNN
 function predictive_interval_at(post_samples::AbstractMatrix{Y}, x_i::AbstractVector{Y},

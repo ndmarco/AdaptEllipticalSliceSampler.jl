@@ -194,7 +194,7 @@ We can plot the log pdf of the posterior at every iteration of the Markov chain 
 detect convergence issues.
 
 ```@example DeepGP
-plot(results.l_pdf[1:n_MCMC], legend = false)
+plot(results[:lp][1:n_MCMC], legend = false)
 ```
 
 **Note: The Markov chain should likely be run longer, but due to limited computational resources in compiling the documentation, we are not able to run it sufficiently long.**
@@ -305,12 +305,13 @@ end
 time_points = collect(LinRange(-2.5, 2.5, 500))
 time_points = setdiff(time_points, X_N)
 
-### Run function (remember to transform your log-transformed variables back)
-Y_pred = predictive_draws(time_points, results.samps[:,1:N_obs], 
-                          exp.(results.samps[:,N_obs + 3]), 
-                          exp.(results.samps[:,N_obs + 1]), 
-                          exp.(results.samps[:,N_obs + 2]), g_y, 
-                          g_w, Y_N, X_N, ν, burnin = results.params.burnin)
+## Get samples from the Markov chain
+samps = Array(results)
+Y_pred = predictive_draws(time_points, samps[:,1:N_obs], 
+                          exp.(samps[:,N_obs + 3]), 
+                          exp.(samps[:,N_obs + 1]), 
+                          exp.(samps[:,N_obs + 2]), g_y, 
+                          g_w, Y_N, X_N, ν, burnin = 0.5)
 
 
 ### Plot results
