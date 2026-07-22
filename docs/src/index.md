@@ -8,8 +8,8 @@ multi-modal, high-dimensional, and\or are constrained to an open subset of $\mat
 Using AGESS to sample from the posterior of your own models is relatively simple and can be 
 broken down into the following steps:
 1. Install Julia and the `AdaptEllipticalSliceSampler.jl` package (See [Installation](assets/install.md) page)
-2. Write a Julia function that efficiently evaluates the log posterior density (See [Performance Tips](assets/Performance.md) and [Tutorials](assets/Regression.md) pages)
-3. Call the `AGESS` function (See [Tutorials](assets/Regression.md) pages)
+2. Write a Julia function that efficiently evaluates the log posterior density (See [Performance Tips](generated/Performance.md) and [Tutorials](generated/Regression.md) pages)
+3. Call the `AGESS` function (See [Tutorials](generated/Regression.md) pages)
 
 ### References
 

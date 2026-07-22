@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "59019ce624a2cf7cbd58b61c36eb7149de2117b8"
+project_hash = "b085bce12feee3b43d089569fc63aee2050f0d74"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "ec6be48a85c93d995563b84bff8a86bc98df45ce"
@@ -114,7 +114,7 @@ weakdeps = ["SparseArrays", "StaticArrays"]
 deps = ["AbstractMCMC", "ArgCheck", "Distributions", "LinearAlgebra", "LogDensityProblems", "MCMCChains", "ProgressMeter", "Random"]
 path = ".."
 uuid = "630fce29-b4bc-4795-b1a0-7c5b858f73a1"
-version = "0.1.0"
+version = "0.2.0"
 weakdeps = ["DynamicPPL"]
 
     [deps.AdaptEllipticalSliceSampler.extensions]
@@ -1226,6 +1226,12 @@ version = "7.7.1"
 deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 version = "1.12.0"
+
+[[deps.Literate]]
+deps = ["Base64", "IOCapture", "JSON", "REPL"]
+git-tree-sha1 = "bb26d8b8ed0fa451ce3511e99c950653a2f31fe1"
+uuid = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
+version = "2.21.0"
 
 [[deps.LogDensityProblems]]
 deps = ["ArgCheck", "DocStringExtensions", "Random"]
