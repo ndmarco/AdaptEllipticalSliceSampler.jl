@@ -47,9 +47,15 @@ function Volcano_density(x::AbstractVector{<:AbstractFloat}, μ::AbstractVector{
     return exp(pdf)
 end
 
-## Function for graphing
+## Function for graphing (buffers reused across the 400×400 grid instead of
+## allocating three new vectors on every call)
+const volcano_x = zeros(2)
+const volcano_μ = [1.0, 1.0]
+const volcano_ph = zeros(2)
 function Volcano(x1, x2)
-    return Volcano_density([x1, x2], [1.0, 1.0], zeros(2))
+    volcano_x[1] = x1
+    volcano_x[2] = x2
+    return Volcano_density(volcano_x, volcano_μ, volcano_ph)
 end
 
 grid1 = range(-5, 5; length=400)
@@ -234,7 +240,7 @@ function plot_base(chain; label="")
     lps = chain[:lp]
 
     ## How many surface points to sample.
-    granularity = 10_000
+    granularity = 1_000
 
     ## Range start/stop points.
     spread = 0.5
@@ -294,8 +300,10 @@ sampler = AGESSSampler(model, n_MCMC)
 chain = sample(Xoshiro(123), model, sampler, n_MCMC)
 chain = chain[2501:end,:,:]
 
-p = plot_base(chain)
-p = plot_scatter_agess(chain, p; label="AGESS ($(round(MCMCChains.wall_duration(chain); digits=2))s)")
+## Compute the (expensive) base surface once and reuse copies of it below,
+## rather than recomputing the same 10,000×10,000-point surface for each sampler.
+p_base = plot_base(chain)
+p = plot_scatter_agess(chain, p_base; label="AGESS ($(round(MCMCChains.wall_duration(chain); digits=2))s)")
 
 function plot_scatter(chain, p; label="")
     ## Extract values from chain.
@@ -328,26 +336,22 @@ end
 
 c1 = sample(Xoshiro(123), model, PG(20) , n_MCMC; chain_type = MCMCChains.Chains)
 c1 = c1[2501:end,:,:]
-p1  = plot_base(chain)
-p1 = plot_scatter(c1, p1; label="PG(20) ($(round(MCMCChains.wall_duration(c1); digits=2))s)")
+p1 = plot_scatter(c1, deepcopy(p_base); label="PG(20) ($(round(MCMCChains.wall_duration(c1); digits=2))s)")
 
 
 c2 = sample(Xoshiro(123), model, MH(), n_MCMC; chain_type = MCMCChains.Chains)
 c2 = c2[2501:end,:,:]
-p2  = plot_base(chain)
-p2 = plot_scatter(c2, p2; label="MH ($(round(MCMCChains.wall_duration(c2); digits=2))s)")
+p2 = plot_scatter(c2, deepcopy(p_base); label="MH ($(round(MCMCChains.wall_duration(c2); digits=2))s)")
 
 c3 = sample(Xoshiro(123), model, NUTS(0.65), n_MCMC; chain_type = MCMCChains.Chains)
 c3 = c3[2501:end,:,:]
-p3  = plot_base(chain)
-p3 = plot_scatter(c3, p3; label="NUTS ($(round(MCMCChains.wall_duration(c3); digits=2))s)")
+p3 = plot_scatter(c3, deepcopy(p_base); label="NUTS ($(round(MCMCChains.wall_duration(c3); digits=2))s)")
 
 burn_in = 2_500
 ram = externalsampler(RobustAdaptiveMetropolis(); unconstrained=false)
 c4 = sample(Xoshiro(123), model, ram, n_MCMC; num_warmup=burn_in,
             discard_initial=burn_in, progress=false, chain_type=MCMCChains.Chains)
-p4  = plot_base(chain)
-p4 = plot_scatter(c4, p4; label="ARW ($(round(MCMCChains.wall_duration(c4); digits=2))s)")
+p4 = plot_scatter(c4, deepcopy(p_base); label="ARW ($(round(MCMCChains.wall_duration(c4); digits=2))s)")
 
 
 plot(p, p1, p2, p3, p4; layout=(2, 3))
