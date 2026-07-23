@@ -21,7 +21,7 @@ using Plots
 using LinearAlgebra
 
 Random.seed!(123)
-
+@info("Starting Constrained Regression")
 D = 2
 N = 100
 
@@ -73,6 +73,7 @@ plot(circleShape(), ylims=(-1.5, 1.5), xlims=(-1.5, 1.5), legend=false)
 
 scatter!([β[1]], [β[2]], color="red")
 scatter!(results.value[1000:end,1,:], results.value[1000:end,2,:], alpha = 0.4)
+@info "Ending Constrained Regression"
 
 # In the figure above, we can see that the red point is the true unconstrained $\boldsymbol{\beta}$,
 # from which the data was generated from. In green, we can see samples generated from our Markov chain.

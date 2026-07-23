@@ -48,7 +48,7 @@ using Plots
 using LinearAlgebra
 
 Random.seed!(123)
-
+@info "Starting Deep GP"
 function gen_data(N::T, min_eval::Y, max_eval::Y) where {Y<:AbstractFloat, T<:Integer}
     X = collect(LinRange(min_eval, max_eval, N))
     Y_N = sin.(X) .+ 2 * exp.(-30 * X.^2)
@@ -324,7 +324,7 @@ truth = sin.(time_points) .+ 2 * exp.(-30 * time_points.^2)
 p = plot!(p, time_points, truth, color = "red", label ="Truth")
 plot!(p, time_points, Lower_CI, fillrange = Upper_CI, fillalpha = 0.3, alpha = 0.3,
       label = "95% CI")
-
+@info "Ending Deep GP"
 # ### Conclusion
 
 # Deep GP models are highly flexible models, that can lead to multimodal posterior distributions.
