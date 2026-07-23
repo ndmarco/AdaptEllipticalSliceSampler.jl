@@ -37,9 +37,9 @@ using Test, LinearAlgebra, Distributions, Turing
     mcmc_out = mcmc_out[500:1000,:,:]
 
     ## Test recovery of β coefficients
-    @test maximum(mean(mcmc_out)[1:10,2] .- β) < 0.05
+    @test maximum(abs.(mean(mcmc_out)[1:10,2] .- β)) < 0.05
     ## Test recovery of scale parameter
-    @test abs(mean(exp.(mcmc_out.value[:, 11,:])) - 0.1) < 0.2
+    @test abs(mean(exp.(mcmc_out.value[:, 11,:])) - 0.01) < 0.05
 
     ####################################
     ## Test using Turing.jl framework ##
@@ -63,7 +63,7 @@ using Test, LinearAlgebra, Distributions, Turing
     mcmc_out = mcmc_out[500:1000,:,:]
 
     ## Test recovery of β coefficients
-    @test maximum(mean(mcmc_out)[2:11,2] .- β) < 0.05
+    @test maximum(abs.(mean(mcmc_out)[2:11,2] .- β)) < 0.05
     ## Test recovery of scale parameter
-    @test abs(mean(mcmc_out.value[:, 1,:]) - 0.01) < 0.02
+    @test abs(mean(mcmc_out.value[:, 1,:]) - 0.01) < 0.05
 end

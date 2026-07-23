@@ -21,4 +21,4 @@ Alternatively one can install the package directly from the GitHub repository as
 using Pkg
 Pkg.add(url = "https://github.com/ndmarco/AdaptEllipticalSliceSampler.jl")
 ```
-Once the package is installed, checkout one of the [tutorials](generated/Regression.md) to get started.
+Once the package is installed, checkout one of the [tutorials](../generated/Regression.md) to get started.
