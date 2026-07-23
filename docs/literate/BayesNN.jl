@@ -145,7 +145,9 @@ Random.seed!(123)
 ## ----------------------------------------------------------------------
 ## Read data
 ## ----------------------------------------------------------------------
-data = readdlm(download("http://archive.ics.uci.edu/ml/machine-learning-databases/00243/yacht_hydrodynamics.data"))
+## Data can be found at http://archive.ics.uci.edu/ml/machine-learning-databases/00243/yacht_hydrodynamics.data
+data_path = joinpath(pkgdir(AdaptEllipticalSliceSampler), "docs", "literate", "data", "yacht_hydrodynamics.data")
+data = readdlm(data_path)
 X = Matrix(data[:, 1:6]')      # 6 x 308
 y = reshape(data[:, 7], 1, :)  # 1 x 308
 

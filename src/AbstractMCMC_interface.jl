@@ -271,7 +271,7 @@ function AbstractMCMC.step(rng::Random.AbstractRNG, model::AbstractMCMC.Abstract
             state.lpdf_current = AGESS_single_step!(state.x_current, state.x_next, state.z, log_posterior, sampler.t_dist,
                                                      sampler.ν, P, state.ph_AGESS, state.μ_adapt, state.Σ_chol_adapt.L,
                                                      state.lpdf_current; rng = rng)
-        ## COnduct transition using non-adaptive kernel (standard )
+        ## Conduct transition using non-adaptive kernel (prior)
         else
             state.lpdf_current = AGESS_single_step!(state.x_current, state.x_next, state.z, log_posterior, sampler.t_dist,
                                                      sampler.ν, P, state.ph_AGESS, sampler.μ_0, sampler.Σ_0_chol.L,
