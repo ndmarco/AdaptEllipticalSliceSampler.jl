@@ -114,10 +114,10 @@ function run_comparison(P::Int; seed=123)
     results["ESS"] = median_ess(chain_ESS[(burn_in + 1):end, :, :]) / post_burn_in
 
     ## Metropolis-Hastings
-    chain_MH = sample(Xoshiro(seed), model, MH(), 5 * n_MCMC; progress=false,
+    chain_MH = sample(Xoshiro(seed), model, MH(), n_MCMC; progress=false,
                       chain_type=MCMCChains.Chains)
     ## Divide by the length of chain after burnin
-    results["MH"] = median_ess(chain_MH[(5*burn_in + 1):end, :, :]) / (5*post_burn_in)
+    results["MH"] = median_ess(chain_MH[(burn_in + 1):end, :, :]) / (post_burn_in)
 
     ## Adaptive random walk
     ram = externalsampler(RobustAdaptiveMetropolis(); unconstrained=false)
@@ -151,7 +151,9 @@ p
 # First, note that the y-axis of the plot above is on a logarithmic scale. We can see that as the
 # dimension of the target distribution increases, the effective sample size per iteration significantly
 # decreases for most samplers (adaptive random walk (ARW), Metropolis Hastings (MH), and elliptical
-# slice sampler (ESS)). It is crucial to note that in this case, even though the elliptical slice
+# slice sampler (ESS)). Note that the ESS could not even be calculated under
+# Metropolis Hastings, due to a highly autocorrelated chain. It is crucial to realize that in this case,
+# even though the elliptical slice
 # sampler has the same target distribution as the other samplers, it is not assuming a Gaussian
 # prior that is centered at $\boldsymbol{\mu}$. Instead, it assumes that the prior is a Gaussian
 # prior that is centered at the origin; that is, a prior that has a significant mismatch with the
