@@ -1069,3 +1069,8 @@ p_combined
 # [^1]: R. Neal. Bayesian learning for neural networks (Vol. 118). Springer Science & Business Media, 2012.
 
 # [^2]: N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
+
+## Free the largest objects from this tutorial (the 500,000-sample heteroskedastic chain and
+## its posterior predictive draws) before the next tutorial's page is built.
+results = results2 = draws = f_means = draws_test = f_means_test = nothing
+GC.gc()

@@ -343,3 +343,7 @@ plot!(p, time_points, Lower_CI, fillrange = Upper_CI, fillalpha = 0.3, alpha = 0
 # [^6]: A. Sauer, R. B. Gramacy, and D. Higdon. Active learning for deep gaussian process surrogates. Technometrics, 65(1):4–18, 2023.
 #
 # [^7]: N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
+
+## Free the sampled chain and posterior predictive draws before the next tutorial's page is built.
+results = samps = Y_pred = nothing
+GC.gc()

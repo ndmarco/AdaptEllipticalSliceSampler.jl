@@ -357,3 +357,7 @@ plot(results[:lp], legend = false)
 # [^4]: M. Betancourt. A conceptual introduction to hamiltonian monte carlo. arXiv preprint arXiv:1701.02434, 2017.
 #
 # [^5]: S. T. Tokdar, R. Sen, H. Zheng, and S. Zhang. Density discontinuity regression. arXiv preprint arXiv:2507.05581, 2025.
+
+## Free the sampled chains before the next tutorial's page is built.
+results = β_samps = nothing
+GC.gc()

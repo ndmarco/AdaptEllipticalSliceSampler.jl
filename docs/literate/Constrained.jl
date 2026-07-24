@@ -86,3 +86,7 @@ scatter!(results.value[1000:end,1,:], results.value[1000:end,2,:], alpha = 0.4)
 # [^3]: L. L. Duan, A. L. Young, A. Nishimura, and D. B. Dunson. Bayesian constraint relaxation. Biometrika, 107(1):191–204, 2020.
 #
 # [^4]: X. Zhou, Q. Heng, E. C. Chi, and H. Zhou. Proximal mcmc for bayesian inference of constrained and regularized estimation. The American Statistician, 78(4):379–390, 2024.
+
+## Free the sampled chain before the next tutorial's page is built.
+results = nothing
+GC.gc()

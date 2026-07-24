@@ -498,3 +498,8 @@ hline!([Σ_truth[1,1]])
 # [^1]: N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
 #
 # [^2]: A. Bhattacharya and D. B. Dunson. Sparse Bayesian infinite factor models. Biometrika, 98(2):291-306, 2011.
+
+## Free the sampled chains and posterior arrays before the next tutorial's page is built.
+Λ_samp = η_samp = D_samp = ϕ_samp = δ_samp = Σ_samp = Σ_mean = nothing
+results = samps = Λ_samp2 = η_samp2 = D_samp2 = δ_samp2 = ϕ_samp2 = Σ_samp2 = Σ_mean2 = nothing
+GC.gc()

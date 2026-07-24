@@ -409,3 +409,8 @@ p
 # [^5]: M. D. Hoffman and A. Gelman. The no-U-turn sampler: adaptively setting path lengths in Hamiltonian Monte Carlo. Journal of Machine Learning Research, 15(47):1593–1623, 2014.
 #
 # [^6]: C. Andrieu, A. Doucet, and R. Holenstein. Particle markov chain monte carlo methods. Journal of the Royal Statistical Society Series B: Statistical Methodology, 72(3):269–342, 2010.
+
+## Free the sampled chains and cached plot surfaces before the next tutorial's page is built.
+chain = c1 = c2 = c3 = c4 = chains = nothing
+p_base = p = p1 = p2 = p3 = p4 = nothing
+GC.gc()
