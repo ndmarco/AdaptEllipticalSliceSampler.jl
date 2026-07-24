@@ -140,26 +140,6 @@ using DelimitedFiles
 using StatsBase
 using AdaptEllipticalSliceSampler
 using Plots
-using Serialization
-
-# The MCMC runs below are expensive (the heteroskedastic model alone draws 500,000
-# samples), so we cache each chain to disk and reuse it on subsequent documentation
-# builds. 
-const BAYESNN_CACHE_DIR = joinpath(pkgdir(AdaptEllipticalSliceSampler), "docs", "literate", "cache")
-mkpath(BAYESNN_CACHE_DIR)
-
-function cached_agess(cache_name::AbstractString, key, log_posterior::Function, n_MCMC::Int, P::Int; kwargs...)
-    cache_path = joinpath(BAYESNN_CACHE_DIR, cache_name)
-    if isfile(cache_path)
-        cached = deserialize(cache_path)
-        if cached.key == key
-            return cached.chain
-        end
-    end
-    chain = AGESS(log_posterior, n_MCMC, P; kwargs...)
-    serialize(cache_path, (key = key, chain = chain))
-    return chain
-end
 
 Random.seed!(123)
 ## ----------------------------------------------------------------------
@@ -225,18 +205,11 @@ println("--- Number of Parameters = ", P, " ---- \n")
 ## Run AGESS
 ## ----------------------------------------------------------------------
 n_MCMC = 20000  # Should run for longer in realistic situations
-homoskedastic_key = (n_MCMC, P, hash(X_train), hash(y_train), gamma_shape, gamma_rate)
-## Use cached results
-## If you want to run it, use the following:
-#results = AGESS(θ -> transformed_log_posterior(θ, X_train, y_train, W_ph, b_ph, log_α, 
-#                                               H_ph, Y_ph, resid, arch, 
-#                                               gamma_shape,  gamma_rate, 1.0), 
-#                n_MCMC, P)
-results = cached_agess("BayesNN_homoskedastic.jls", homoskedastic_key,
-                       θ -> transformed_log_posterior(θ, X_train, y_train, W_ph, b_ph, log_α,
-                                                      H_ph, Y_ph, resid, arch,
-                                                      gamma_shape,  gamma_rate, 1.0),
-                       n_MCMC, P)
+
+results = AGESS(θ -> transformed_log_posterior(θ, X_train, y_train, W_ph, b_ph, log_α, 
+                                               H_ph, Y_ph, resid, arch, 
+                                               gamma_shape,  gamma_rate, 1.0), 
+                n_MCMC, P)
 
 # By plotting the log target density, we can see that our Markov chain appears to converge relatively fast. However, we will conservatively discard the first 50\% of the chain and use the remaining 50\% for inference.
 
@@ -741,19 +714,10 @@ end
 
 
 ## run AGESS
-heteroskedastic_key = (n_MCMC, P, hash(X_train), hash(y_train), gamma_shape, gamma_rate,
-                       gamma_shape_g, gamma_rate_g, hash(θ_init))
-                       ## Use cached results
-## If you want to run it, use the following:
-#results2 = AGESS(θ -> transformed_log_posterior(θ, X_train, y_train, W_f, W_g, b_f, b_g, 
-#                                                log_α_f, log_α_g, H_f, H_g, f, g, resid, arch, gamma_shape, 
-#                                                gamma_rate, gamma_shape_g, gamma_rate_g, 1.0), 
-#                 n_MCMC, P, init_x = θ_init)
-results2 = cached_agess("BayesNN_heteroskedastic.jls", heteroskedastic_key,
-                        θ -> transformed_log_posterior(θ, X_train, y_train, W_f, W_g, b_f, b_g,
-                                                       log_α_f, log_α_g, H_f, H_g, f, g, resid, arch, gamma_shape,
-                                                       gamma_rate, gamma_shape_g, gamma_rate_g, 1.0),
-                        n_MCMC, P; init_x = θ_init)
+results2 = AGESS(θ -> transformed_log_posterior(θ, X_train, y_train, W_f, W_g, b_f, b_g, 
+                                                log_α_f, log_α_g, H_f, H_g, f, g, resid, arch, gamma_shape, 
+                                                gamma_rate, gamma_shape_g, gamma_rate_g, 1.0), 
+                 n_MCMC, P, init_x = θ_init)
 
 # As we can see, the Markov chain took significantly longer to converge under this more flexible model.
 
@@ -1069,8 +1033,3 @@ p_combined
 # [^1]: R. Neal. Bayesian learning for neural networks (Vol. 118). Springer Science & Business Media, 2012.
 
 # [^2]: N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
-
-## Free the largest objects from this tutorial (the 500,000-sample heteroskedastic chain and
-## its posterior predictive draws) before the next tutorial's page is built.
-results = results2 = draws = f_means = draws_test = f_means_test = nothing
-GC.gc()

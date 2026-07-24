@@ -14,10 +14,10 @@ const GENERATED_DIR = joinpath(@__DIR__, "src", "generated")
 const NOTEBOOK_DIR = joinpath(GENERATED_DIR, "notebooks")
 
 const LITERATE_PAGES = [
-    "Motivation",
+    #"Motivation", - pre-rendered due to computational costs
     "Performance",
     "Banana",
-    "BayesNN",
+    #"BayesNN", - pre-rendered due to computational costs
     "Constrained",
     "Deep_GP",
     "Regression",
@@ -38,7 +38,7 @@ makedocs(
     modules = [AdaptEllipticalSliceSampler],
     pages = [
         "Introduction" => "index.md",
-        #"Why AGESS?" => "generated/Motivation.md",
+        "Why AGESS?" => "generated/Motivation.md",
         "Installation" => "assets/install.md",
         "Documentation" => "assets/Documentation.md",
         "Performance Tips" => "generated/Performance.md",
