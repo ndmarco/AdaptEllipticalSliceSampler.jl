@@ -47,7 +47,6 @@ using Distributions
 using Plots
 using LinearAlgebra
 
-@info  "Starting Performance"
 function lm_log_posterior_1(Param, X, y)
     P = length(Param)
     N = length(y)
@@ -131,7 +130,6 @@ end
 
 ph = zeros(1000)
 @benchmark lm_log_posterior_3($Param, $X, $y, $ph)
-@info  "Ending Performance"
 
 # We can see that we have a 1000-fold speed-up by just efficiently evaluating the log posterior
 # density. This directly translates into a similar magnitude increase in the effective sample size

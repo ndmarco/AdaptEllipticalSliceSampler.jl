@@ -38,7 +38,6 @@ using Plots, LinearAlgebra, Turing, Random, MCMCChains
 using AdaptEllipticalSliceSampler, EllipticalSliceSampling, AdvancedMH
 
 ## Volcano distribution (unnormalized): μ(x) ∝ exp{‖x‖ - ½‖x‖²}
-@info "Starting Volcano"
 function Volcano_density(x::AbstractVector{<:AbstractFloat}, μ::AbstractVector{<:AbstractFloat},
                          ph::AbstractVector{<:AbstractFloat})
     @. ph = x - μ
@@ -208,7 +207,6 @@ p
 #
 # Let's start by defining this model using the `Turing` model.
 
-@info "Starting Complex Target"
 @model function complex_target(x)
     s² ~ InverseGamma(2, 3)
     m ~ Normal(0, sqrt(s²))
@@ -397,7 +395,6 @@ p = bar(xs .- w/2, ess_matrix[:, 1]; bar_width=w, label="s²",
 bar!(p, xs .+ w/2, ess_matrix[:, 2]; bar_width=w, label="m", yscale = :log10)
 p
 
-@info "Ending Complex Target"
 
 # **Key Takeaway:** AGESS is locally adaptive and gradient free, which allows it to handle targets that have rapidly changing gradients (should they exist). However, the sampler is still also able to make global moves, allowing it to effectively traverse multimodal distributions.
 

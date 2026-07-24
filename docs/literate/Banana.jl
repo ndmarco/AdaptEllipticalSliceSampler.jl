@@ -26,7 +26,6 @@ using LinearAlgebra
 using MCMCChains
 
 Random.seed!(123)
-@info "Starting Banana"
 function log_posterior(theta::AbstractVector{<:AbstractFloat}, Y::Vector{<:AbstractFloat},
                        mu::Vector{<:AbstractFloat})
     mean = (theta[1] - mu[1]) + (theta[2] - mu[2])^2
@@ -100,7 +99,6 @@ plot(results[:lp], legend = false)
 # (up to a constant) of the posterior distribution of $\boldsymbol{\theta}$ based on the
 # hierarchical representation of the Twin Banana distribution.
 
-@info "Starting Twin Banana"
 function TB_log_posterior(theta::AbstractVector{<:AbstractFloat}, Y::Vector{<:AbstractFloat},
                           mu::Vector{<:AbstractFloat})
     m = (0.1 * (theta[1] - mu[1])^2  -  0.5 * (theta[2] - mu[2])^4 -
@@ -154,7 +152,6 @@ scatter(results_TB[:param_1], results_TB[:param_2], legend = false)
 # Again, we can also view the log posterior density evaluated at each iteration of the Markov chain:
 
 plot(results_TB[:lp], legend = false)
-@info "Ending Banana"
 
 # ### Conclusion
 

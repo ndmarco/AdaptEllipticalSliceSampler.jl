@@ -49,7 +49,6 @@ using Plots
 using LinearAlgebra
 
 Random.seed!(123)
-@info "Starting Factor Model Gibbs"
 function delta_sampler!(δ::AbstractVector{Y}, ϕ::AbstractMatrix{Y}, Λ::AbstractMatrix{Y},
                         a1_δ::Y, a2_δ::Y, ph_δ::AbstractVector{Y}) where {Y<:AbstractFloat}
     K = length(δ)
@@ -374,7 +373,6 @@ heatmap(Σ_mean)
 
 plot(Σ_samp[:,1,1])
 hline!([Σ_truth[1,1]])
-@info "Ending Factor Model Gibbs"
 
 # ### Conclusion
 
@@ -383,7 +381,6 @@ hline!([Σ_truth[1,1]])
 # that we can simply use AGESS for sampling all parameters. Although this tutorial primarily serves
 # as a guide for how to construct custom MCMC sampling schemes, we can compare the results obtained
 # when using AGESS to sample all parameters.
-@info "Starting Factor Model Joint"
 function posterior2(Λ::AbstractMatrix{Y}, η::AbstractMatrix{Y}, Y_obs::AbstractMatrix{Y},
                    D::AbstractMatrix{Y}, ϕ::AbstractMatrix{Y}, δ::AbstractVector{Y},
                    τ_ph::AbstractVector{Y}, a_1::Y, a_2::Y, ν::Y, a::Y, b::Y,
@@ -498,7 +495,6 @@ heatmap(Σ_mean2)
 
 plot(Σ_samp2[:,1,1])
 hline!([Σ_truth[1,1]])
-@info "Ending Factor Model Joint"
 # [^1]: N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
 #
 # [^2]: A. Bhattacharya and D. B. Dunson. Sparse Bayesian infinite factor models. Biometrika, 98(2):291-306, 2011.

@@ -25,7 +25,6 @@ using Distributions
 using Random
 using SpecialFunctions: loggamma
 
-@info "Starting Bayesian NN"
 struct BNNArchitecture
     sizes::Vector{Int}     # [n_0, n_1, ..., n_L, n_out]
 end
@@ -700,7 +699,6 @@ println("--- Number of Parameters = ", P, " ---- \n")
 ## ----------------------------------------------------------------------
 n_MCMC = 500000  # Should run for longer in realistic scenarios
 
-@info "Starting Bayesian NN (Mean and Variance)"
 ### use warm start using the homogeneous model for W_f and b_f
 θ_init = zeros(P)
 index_f = let idx = 0
@@ -1023,7 +1021,6 @@ plot!(p_calib, nominal_levels, empirical_coverage, marker=:circle, color=:navy,
 p_combined = plot(p_coverage, p_calib, layout=(1,2), size=(1100,450),
                    left_margin=5Plots.mm, bottom_margin=5Plots.mm)
 p_combined
-@info "Ending Bayesian NN (Mean and Var)"
 
 # We can see that the predictive distributions are better calibrated under the heteroskedastic model. While there is a bit of undercoverage, one has to remember that this is coverage on a test dataset, and some undercoverage is perhaps expected.
 

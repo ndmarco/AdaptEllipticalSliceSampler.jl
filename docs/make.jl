@@ -31,6 +31,7 @@ for name in LITERATE_PAGES
     Literate.notebook(src, NOTEBOOK_DIR; documenter = true, execute = false)
 end
 
+@info "Starting makedocs (doctest phase begins here)"
 makedocs(
     sitename = "AdaptEllipticalSliceSampler",
     format = Documenter.HTML(),
@@ -53,6 +54,7 @@ makedocs(
         ],
     ],
 )
+@info "makedocs completed successfully"
 
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual

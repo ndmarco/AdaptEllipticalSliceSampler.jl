@@ -58,7 +58,6 @@ D = 10
 # it back to the original space before returning the chain back to the user. Thus, in cases where we can use `Turing.jl`,
 # we can not worry about remembering Jacobians!
 
-@info "Starting Linear Regression"
 @model function linear_regression(X::AbstractMatrix{Y}, y::AbstractVector{Y}) where {Y<:AbstractFloat}
     N, D = size(X)
     ## Make sure dimensions conform
@@ -179,7 +178,6 @@ scatter(β,legend = false)
 # log-transform $\tau$ and $\lambda$), we will instead simply specify the model using the `Turing.jl`
 # framework.
 
-@info "Starting Horse Shoe"
 @model function HS_regression(X::AbstractMatrix{Y}, y::AbstractVector{Y}) where {Y<:AbstractFloat}
     N,D = size(X)
     @assert length(y) == N
@@ -291,7 +289,6 @@ N = 1000
 # implemented. We will first start by constructing a function that evaluates the log likelihood,
 # and then a function that evaluates the log posterior density.
 
-@info "Starting ReLU"
 function log_likelihood(β::AbstractVector{Y}, x::Matrix{Y},
                         y::Vector{T}) where {Y <:AbstractFloat, T<:Integer}
     log_lik::Float64 = 0.0
@@ -342,7 +339,6 @@ scatter!([β[1]], [β[2]], color = "red")
 # detect convergence issues.
 
 plot(results[:lp], legend = false)
-@info "Ending ReLU"
 
 # ## Conclusion
 
