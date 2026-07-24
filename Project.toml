@@ -1,25 +1,41 @@
 name = "AdaptEllipticalSliceSampler"
 uuid = "630fce29-b4bc-4795-b1a0-7c5b858f73a1"
 authors = ["Nicholas Marco <nicholas.marco@duke.edu>", "Surya T. Tokdar"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
+AbstractMCMC = "80f14c24-f653-4e6a-9b94-39d6b0f70001"
 ArgCheck = "dce04be8-c92d-5529-be00-80e4d2c0e197"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+LogDensityProblems = "6fdf6af0-433a-55f7-b3ed-c6c6e0b8df7c"
+MCMCChains = "c7f686f2-ff18-58e9-bc7b-31028e88f75d"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
+[weakdeps]
+DynamicPPL = "366bfd00-2699-11ea-058f-f148b4cae6d8"
+
+[extensions]
+AdaptEllipticalSliceSamplerDynamicPPLExt = "DynamicPPL"
+
 [compat]
+AbstractMCMC = "5.15.1"
 ArgCheck = "2.5.0"
 Distributions = "0.25.123"
+DynamicPPL = "0.42"
 LinearAlgebra = "1.11.0"
+LogDensityProblems = "2.2.0"
+MCMCChains = "7.7.0"
 ProgressMeter = "1.11.0"
 Random = "1.11.0"
+Turing = "0.46"
 julia = "1.10.10"
 
 [extras]
+DynamicPPL = "366bfd00-2699-11ea-058f-f148b4cae6d8"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [targets]
-test = ["Test"]
+test = ["Test", "DynamicPPL", "Turing"]

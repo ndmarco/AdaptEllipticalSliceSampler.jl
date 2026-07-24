@@ -12,15 +12,13 @@ import Markdown
 Markdown.parse("```\n\$ julia\n\n$(banner)\njulia>\n```")
 ```
 
-The package can be easily installed as follows:
+The package can be easily installed by entering Pkg mode of the REPL (type `]` in the REPL)
+and running the command `add AdaptEllipticalSliceSampler`.
+
+Alternatively one can install the package directly from the GitHub repository as follows:
 
 ```@repl
 using Pkg
 Pkg.add(url = "https://github.com/ndmarco/AdaptEllipticalSliceSampler.jl")
 ```
-
-
-Alternatively, we can enter the Pkg mode of the REPL by pressing `]` in the REPL and install 
-the package using the command `add https://github.com/ndmarco/AdaptEllipticalSliceSampler.jl`.
-
-Once the package is installed, checkout one of the tutorials to get started.
+Once the package is installed, checkout one of the [tutorials](../generated/Regression.md) to get started.

@@ -9,6 +9,7 @@ on:
 
 jobs:
   build:
+    timeout-minutes: 180
     # These permissions are needed to:
     # - Deploy the documentation: https://documenter.juliadocs.org/stable/man/hosting/#Permissions
     # - Delete old caches: https://github.com/julia-actions/cache#usage
@@ -24,6 +25,20 @@ jobs:
         with:
           version: '1'
       - uses: julia-actions/cache@v2
+      - name: Cache BayesNN MCMC results
+        uses: actions/cache@v4
+        with:
+          path: docs/literate/cache
+          # The key is intentionally unique per run (not content-hashed) so that edits to
+          # BayesNN.jl that don't touch the model/data/hyperparameters (prose, plots, ...)
+          # don't force a slow recompute: restore-keys pulls in the most recent cache
+          # regardless of file content, and BayesNN.jl's own cached_agess() helper checks
+          # at runtime whether the restored chain still matches the current inputs. If it
+          # doesn't (data, architecture, hyperparameters, or chain length changed), it
+          # recomputes and this step saves the refreshed result as the new latest entry.
+          key: bayesnn-mcmc-${{ github.run_id }}
+          restore-keys: |
+            bayesnn-mcmc-
       - name: Install dependencies
         run: julia --project=docs/ -e 'using Pkg;
                 Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
@@ -32,3 +47,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # If authenticating with GitHub Actions token
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }} # If authenticating with SSH deploy key
+          GKSwstype: "100"   # forces GR into headless/null-device mode for every plot

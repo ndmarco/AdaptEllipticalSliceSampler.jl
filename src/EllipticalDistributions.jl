@@ -29,17 +29,17 @@ end
 
 Conditionally generates a sample from a multivariate T distribution
 """
-function cond_rMvT!(z::AbstractVector{Y}, x::AbstractVector{Y}, μ::AbstractVector{Y}, 
+function cond_rMvT!(rng::Random.AbstractRNG, z::AbstractVector{Y}, x::AbstractVector{Y}, μ::AbstractVector{Y}, 
                     Σ_chol::LowerTriangular{Y, <:AbstractMatrix{Y}}, ν::Y, 
                     ph::AbstractVector{Y}, P::T) where {Y<:AbstractFloat, T<:Integer}
-    randn!(z)
+    randn!(rng, z)
     lmul!(Σ_chol, z)
     ph .= (x .- μ)
     ldiv!(Σ_chol, ph)
     d = dot(ph, ph)
-    ṽ = ν + P
+    v_tilde = ν + P
 
-    scale = sqrt((ν + d) / ṽ) / sqrt(rand(Gamma(ṽ / 2, 2 / ṽ)))
+    scale = sqrt((ν + d) / v_tilde) / sqrt(rand(rng, Gamma(v_tilde / 2, 2 / v_tilde)))
     @. z = z * scale + μ
 
     return nothing
@@ -70,12 +70,12 @@ end
 
 Conditionally generates a sample from a one-dimensional T distribution
 """
-function cond_rMvT_1d(x::Y, μ::Y, σ::Y, ν::Y) where {Y<:AbstractFloat}
-    z::typeof(x) = σ * randn() 
+function cond_rMvT_1d(rng::Random.AbstractRNG, x::Y, μ::Y, σ::Y, ν::Y) where {Y<:AbstractFloat}
+    z::typeof(x) = σ * randn(rng) 
     d = (x - μ)^2 / (σ^2)
     ṽ = ν + 1
     z *= sqrt((ν + d) / ṽ)
-    z *= 1 / sqrt(rand(Gamma(ṽ/2, 2/ ṽ)))
+    z *= 1 / sqrt(rand(rng, Gamma(ṽ/2, 2/ ṽ)))
     z += μ
 
     return z
