@@ -182,8 +182,7 @@ sampler = AGESSSampler(model, n_MCMC)
 chain = sample(Xoshiro(123), model, sampler, n_MCMC)
 chain = chain[2501:end,:,:]
 
-# Compute the (expensive) base surface once and reuse copies of it below,
-# rather than recomputing the same 10,000×10,000-point surface for each sampler.
+# plot base (from AGESS)
 p_base = plot_base(chain)
 p = plot_scatter_agess(chain, p_base; label=&quot;AGESS ($(round(MCMCChains.wall_duration(chain); digits=2))s)&quot;)
 
@@ -218,22 +217,26 @@ end
 
 c1 = sample(Xoshiro(123), model, PG(20) , n_MCMC; chain_type = MCMCChains.Chains)
 c1 = c1[2501:end,:,:]
-p1 = plot_scatter(c1, deepcopy(p_base); label=&quot;PG(20) ($(round(MCMCChains.wall_duration(c1); digits=2))s)&quot;)
+p_base = plot_base(chain)
+p1 = plot_scatter(c1, p_base; label=&quot;PG(20) ($(round(MCMCChains.wall_duration(c1); digits=2))s)&quot;)
 
 
 c2 = sample(Xoshiro(123), model, MH(), n_MCMC; chain_type = MCMCChains.Chains)
 c2 = c2[2501:end,:,:]
-p2 = plot_scatter(c2, deepcopy(p_base); label=&quot;MH ($(round(MCMCChains.wall_duration(c2); digits=2))s)&quot;)
+p_base = plot_base(chain)
+p2 = plot_scatter(c2, p_base; label=&quot;MH ($(round(MCMCChains.wall_duration(c2); digits=2))s)&quot;)
 
 c3 = sample(Xoshiro(123), model, NUTS(0.65), n_MCMC; chain_type = MCMCChains.Chains)
 c3 = c3[2501:end,:,:]
-p3 = plot_scatter(c3, deepcopy(p_base); label=&quot;NUTS ($(round(MCMCChains.wall_duration(c3); digits=2))s)&quot;)
+p_base = plot_base(chain)
+p3 = plot_scatter(c3, p_base; label=&quot;NUTS ($(round(MCMCChains.wall_duration(c3); digits=2))s)&quot;)
 
 burn_in = 2_500
 ram = externalsampler(RobustAdaptiveMetropolis(); unconstrained=false)
 c4 = sample(Xoshiro(123), model, ram, n_MCMC; num_warmup=burn_in,
             discard_initial=burn_in, progress=false, chain_type=MCMCChains.Chains)
-p4 = plot_scatter(c4, deepcopy(p_base); label=&quot;ARW ($(round(MCMCChains.wall_duration(c4); digits=2))s)&quot;)
+p_base = plot_base(chain)
+p4 = plot_scatter(c4, p_base; label=&quot;ARW ($(round(MCMCChains.wall_duration(c4); digits=2))s)&quot;)
 
 
 plot(p, p1, p2, p3, p4; layout=(2, 3))
@@ -260,4 +263,4 @@ bar!(p, xs .+ w/2, ess_matrix[:, 2]; bar_width=w, label=&quot;m&quot;, yscale = 
 p</code></pre><p><img src="../Motivation-18.svg" alt/></p><p><strong>Key Takeaway:</strong> AGESS is locally adaptive and gradient free, which allows it to handle targets that have rapidly changing gradients (should they exist). However, the sampler is still also able to make global moves, allowing it to effectively traverse multimodal distributions.</p><pre><code class="language-julia hljs"># Free the sampled chains and cached plot surfaces before the next tutorial&#39;s page is built.
 chain = c1 = c2 = c3 = c4 = chains = nothing
 p_base = p = p1 = p2 = p3 = p4 = nothing
-GC.gc()</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a>N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.</li><li class="footnote" id="footnote-2"><a class="tag is-link" href="#citeref-2">2</a>Y. Chen, K. Gatmiry, and M. Jiang. When does metropolized Hamiltonian Monte Carlo provably outperform Metropolis-adjusted Langevin algorithm? arXiv preprint arXiv:2304.04724, 2023.</li><li class="footnote" id="footnote-3"><a class="tag is-link" href="#citeref-3">3</a>G. O. Roberts and J. S. Rosenthal. Optimal scaling for various metropolis-hastings algorithms. Statistical science, 16(4):351–367, 2001.</li><li class="footnote" id="footnote-4"><a class="tag is-link" href="#citeref-4">4</a>I. Murray, R. Adams, and D. MacKay. Elliptical slice sampling. In Proceedings of the thirteenth international conference on artificial intelligence and statistics, pages 541–548. JMLR Workshop and Conference Proceedings, 2010.</li><li class="footnote" id="footnote-5"><a class="tag is-link" href="#citeref-5">5</a>M. D. Hoffman and A. Gelman. The no-U-turn sampler: adaptively setting path lengths in Hamiltonian Monte Carlo. Journal of Machine Learning Research, 15(47):1593–1623, 2014.</li><li class="footnote" id="footnote-6"><a class="tag is-link" href="#citeref-6">6</a>C. Andrieu, A. Doucet, and R. Holenstein. Particle markov chain monte carlo methods. Journal of the Royal Statistical Society Series B: Statistical Methodology, 72(3):269–342, 2010.</li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Introduction</a><a class="docs-footer-nextpage" href="../../assets/install/">Installation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Friday 24 July 2026 23:38">Friday 24 July 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+GC.gc()</code></pre><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p><section class="footnotes is-size-7"><ul><li class="footnote" id="footnote-1"><a class="tag is-link" href="#citeref-1">1</a>N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.</li><li class="footnote" id="footnote-2"><a class="tag is-link" href="#citeref-2">2</a>Y. Chen, K. Gatmiry, and M. Jiang. When does metropolized Hamiltonian Monte Carlo provably outperform Metropolis-adjusted Langevin algorithm? arXiv preprint arXiv:2304.04724, 2023.</li><li class="footnote" id="footnote-3"><a class="tag is-link" href="#citeref-3">3</a>G. O. Roberts and J. S. Rosenthal. Optimal scaling for various metropolis-hastings algorithms. Statistical science, 16(4):351–367, 2001.</li><li class="footnote" id="footnote-4"><a class="tag is-link" href="#citeref-4">4</a>I. Murray, R. Adams, and D. MacKay. Elliptical slice sampling. In Proceedings of the thirteenth international conference on artificial intelligence and statistics, pages 541–548. JMLR Workshop and Conference Proceedings, 2010.</li><li class="footnote" id="footnote-5"><a class="tag is-link" href="#citeref-5">5</a>M. D. Hoffman and A. Gelman. The no-U-turn sampler: adaptively setting path lengths in Hamiltonian Monte Carlo. Journal of Machine Learning Research, 15(47):1593–1623, 2014.</li><li class="footnote" id="footnote-6"><a class="tag is-link" href="#citeref-6">6</a>C. Andrieu, A. Doucet, and R. Holenstein. Particle markov chain monte carlo methods. Journal of the Royal Statistical Society Series B: Statistical Methodology, 72(3):269–342, 2010.</li></ul></section></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Introduction</a><a class="docs-footer-nextpage" href="../../assets/install/">Installation »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Saturday 25 July 2026 05:23">Saturday 25 July 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
