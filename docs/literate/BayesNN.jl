@@ -484,7 +484,7 @@ hline!(p_z, [-2, 2], color=:red, linestyle=:dot, label="±2 SD")
 
 # Notice that each neural network is assumed to have its own network architecture. We will use a similar prior structure as before:
 
-# $$(w^{1}_f)_{jk} \sim \mathcal{N}(0, 1 / \alpha_1), \qquad (w^{l}_f)_{ji} \sim \mathcal{N}(0, 1/ (\alpha_l \times n_{l-1}))\quad (l \ge 2), $$
+# $$(w^{1}_f)_{jk} \sim \mathcal{N}(0, 1 / \alpha_1), \qquad (w^{l}_f)_{ji} \sim \mathcal{N}(0, 1/ (\alpha_l \times n_{l-1}))\quad (l \ge 2),$$
 
 # $$(w^{1}_g)_{jk} \sim \mathcal{N}(0, 1 / \alpha_1), \qquad (w^{l}_g)_{ji} \sim \mathcal{N}(0, 1/ (\alpha_l \times n_{l-1}))\quad (l \ge 2),$$
 
