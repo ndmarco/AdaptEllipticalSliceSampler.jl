@@ -528,7 +528,7 @@ $$g(x;\theta) = W_g^{L+1}h\left(W^{L_g}h\left(W_g^{L_g-1} \dots h(W_g^{1}x + b_g
 
 Notice that each neural network is assumed to have its own network architecture. We will use a similar prior structure as before:
 
-$$(w^{1}_f)_{jk} \sim \mathcal{N}(0, 1 / \alpha_1), \qquad (w^{l}_f)_{ji} \sim \mathcal{N}(0, 1/ (\alpha_l \times n_{l-1}))\quad (l \ge 2), $$
+$$(w^{1}_f)_{jk} \sim \mathcal{N}(0, 1 / \alpha_1), \qquad (w^{l}_f)_{ji} \sim \mathcal{N}(0, 1/ (\alpha_l \times n_{l-1}))\quad (l \ge 2),$$
 
 $$(w^{1}_g)_{jk} \sim \mathcal{N}(0, 1 / \alpha_1), \qquad (w^{l}_g)_{ji} \sim \mathcal{N}(0, 1/ (\alpha_l \times n_{l-1}))\quad (l \ge 2),$$
 
