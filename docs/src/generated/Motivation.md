@@ -16,12 +16,12 @@ mixing times that scale logarithmically ($\mathcal{O}(\log(P))$) with the dimens
 target distribution (when we have a Gaussian target distribution). Moreover, we prove that
 measures of the multivariate effective sample size (empirical measures for assessing the mixing
 time) are dimension independent when the target distribution is a Gaussian distribution. In
-comparison, Hamiltonian Monte Carlo (under optimal conditions and a warm start) is only able
-to achieve mixing times that are $\mathcal{O}(P^{1/4})$[^2], while an optimally tuned adaptive random
-walk is only able to achieve mixing times that are $\mathcal{O}(P)$[^3]---that is, both sampling
-schemes are only able to achieve mixing rates that have a polynomial dependence on dimension.
-Therefore, AGESS is a promising sampler that scales extremely well with the dimension of
-the target distribution.
+comparison, an optimally tuned adaptive random walk is only able to achieve mixing times 
+that are $\mathcal{O}(P)$[^3], while Hamiltonian Monte Carlo (under optimal conditions and 
+a warm start) has a gradient complexity (defined as the mixing time multiplied by the number
+of gradient evaluations per iteration) of $\mathcal{O}(P^{1/4})$[^2]---that is, both sampling
+schemes scale polynomially with dimension. AGESS is a promising sampler that scales 
+extremely well with the dimension of the target distribution.
 
 The fundamental question becomes: does this scaling property only hold with Gaussian target
 distributions? Empirical evidence suggests that this is not the case, and that similar mixing
@@ -215,7 +215,7 @@ following hierarchical representation:
 
 $$s^2 \sim IG(2,3) \qquad m \sim \mathcal{N}(0, s^2);$$
 
-$$ x_i \sim \mathcal{N}(m + 5(\sin(m) + \cos(m)), s^2).$$
+$$x_i \sim \mathcal{N}(m + 5(\sin(m) + \cos(m)), s^2).$$
 
 Let's start by defining this model using the `Turing` model.
 
