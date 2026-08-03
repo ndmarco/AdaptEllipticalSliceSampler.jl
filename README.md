@@ -43,8 +43,9 @@ y = X * β_true + randn(N) * 0.5
 
 ## Run MCMC
 n_MCMC = 10_000
-sampler = externalsampler(AGESSSampler(n_MCMC))
-chain = sample(linear_regression(X, y), sampler, n_MCMC)
+model = linear_regression(X, y)
+sampler = AGESSSampler(model, n_MCMC)
+chain = sample(model, sampler, n_MCMC)
 ```
 
 **Breaking change (v0.2.0):** `AGESS_single_step!` and `AGESS_single_step_1d!` now require 
