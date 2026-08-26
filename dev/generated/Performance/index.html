@@ -34,14 +34,14 @@ D = 10
 
 # Benchmark function
 Param = ones(D + 1)
-@benchmark lm_log_posterior_1($Param, $X, $y)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 365 samples with 1 evaluation per sample.
- Range (min … max):   8.276 ms … 368.561 ms  ┊ GC (min … max):  0.00% … 97.65%
- Time  (median):      8.445 ms               ┊ GC (median):     0.00%
- Time  (mean ± σ):   13.703 ms ±  37.376 ms  ┊ GC (mean ± σ):  34.64% ± 14.94%
+@benchmark lm_log_posterior_1($Param, $X, $y)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 402 samples with 1 evaluation per sample.
+ Range (min … max):   7.863 ms … 326.590 ms  ┊ GC (min … max):  0.00% … 97.21%
+ Time  (median):      8.101 ms               ┊ GC (median):     0.00%
+ Time  (mean ± σ):   12.440 ms ±  31.044 ms  ┊ GC (mean ± σ):  30.70% ± 14.26%
 
-  █ ▃▁ ▁▂                                                       
-  █▄██▅███▅▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▆ ▆
-  8.28 ms       Histogram: log(frequency) by time      51.6 ms &lt;
+  █ ▄▁   ▂                                                      
+  █▇██▆▆▇█▇▅▁▅▁▁▁▁▄▁▁▁▁▁▁▁▄▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄▅ ▆
+  7.86 ms       Histogram: log(frequency) by time      46.9 ms &lt;
 
  Memory estimate: 22.92 MiB, allocs estimate: 39.</code></pre><p>Let&#39;s see if we can improve on this by pre-allocating some of our variables and specifying the type of variables.</p><pre><code class="language-julia hljs">function lm_log_posterior_2(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
                             y::AbstractVector{Y}, μ::AbstractVector{Y},
@@ -61,14 +61,14 @@ end
 Σ_I_N = diagm(ones(1000))
 Σ_I_P = diagm(ones(D))
 μ_0 = zeros(D)
-@benchmark lm_log_posterior_2($Param, $X, $y, $μ, $μ_0, $Σ_I_N, $Σ_I_P)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 547 samples with 1 evaluation per sample.
- Range (min … max):  8.087 ms …  10.456 ms  ┊ GC (min … max):  0.00% … 16.65%
- Time  (median):     9.917 ms               ┊ GC (median):    16.92%
- Time  (mean ± σ):   9.145 ms ± 940.006 μs  ┊ GC (mean ± σ):   9.63% ±  8.73%
+@benchmark lm_log_posterior_2($Param, $X, $y, $μ, $μ_0, $Σ_I_N, $Σ_I_P)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 508 samples with 1 evaluation per sample.
+ Range (min … max):  7.483 ms … 312.213 ms  ┊ GC (min … max):  0.00% … 97.32%
+ Time  (median):     7.751 ms               ┊ GC (median):     0.00%
+ Time  (mean ± σ):   9.854 ms ±  19.135 ms  ┊ GC (mean ± σ):  19.55% ± 10.93%
 
-   ▃█▅▁                                                ▅▂▁     
-  ▃████▄▃▃▂▁▁▁▁▁▂▂▁▁▁▁▁▁▁▁▁▁▁▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄▄█████▅▄ ▃
-  8.09 ms         Histogram: frequency by time        10.2 ms &lt;
+  ▆█▅            ▆▆▃                                           
+  ████▁▅▅▄▁▁▁▁▄▅▇████▆▅▄▄▇▅▆▁▄▁▁▁▄▁▅▁▁▁▅▇█▅▁▁▁▄▅▁▁▁▁▁▁▁▁▁▁▄▁▆ ▇
+  7.48 ms      Histogram: log(frequency) by time      13.7 ms &lt;
 
  Memory estimate: 15.28 MiB, allocs estimate: 23.</code></pre><p>We can see that there was a modest improvement in performance. We can see that we are allocating less memory. However, it is slow to actually construct these multivariate distributions and evaluate the log pdf of these distributions. We can just perform the calculations ourselves and get significantly better performance. Since Julia is compiled just-in-time, we should feel free to use for-loops as we please! (Unlike R)</p><pre><code class="language-julia hljs">function lm_log_posterior_3(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
                             y::AbstractVector{Y}, ph::AbstractVector{Y}) where {Y&lt;: AbstractFloat}
@@ -91,13 +91,13 @@ end
 
 ph = zeros(1000)
 @benchmark lm_log_posterior_3($Param, $X, $y, $ph)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 10000 samples with 9 evaluations per sample.
- Range (min … max):  2.497 μs … 213.659 μs  ┊ GC (min … max):  0.00% … 91.35%
- Time  (median):     2.872 μs               ┊ GC (median):     0.00%
- Time  (mean ± σ):   3.365 μs ±   8.859 μs  ┊ GC (mean ± σ):  12.17% ±  4.56%
+ Range (min … max):  2.322 μs … 171.322 μs  ┊ GC (min … max):  0.00% … 91.51%
+ Time  (median):     2.512 μs               ┊ GC (median):     0.00%
+ Time  (mean ± σ):   2.926 μs ±   7.072 μs  ┊ GC (mean ± σ):  11.67% ±  4.75%
 
-      ▂▂▄▆▇███▇▆▅▃▃▂▁                                         ▃
-  ▃▆▇██████████████████▇█▇█▇▆▆▆▆▅▅▄▅▅▅▁▃▃▄▅▆▆█▇█▇▇▇▇▆▆▅▄▆▆▅▅▅ █
-  2.5 μs       Histogram: log(frequency) by time      4.58 μs &lt;
+     ▂▇█▆▄▁                                                    
+  ▂▃▆██████▆▄▃▃▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▁▂▁▁▂▂▂▂▂▂▂▂▂▂▂▂▁▂▂▂▂▂ ▃
+  2.32 μs         Histogram: frequency by time        4.17 μs &lt;
 
  Memory estimate: 7.88 KiB, allocs estimate: 3.</code></pre><p>We can see that we have a 1000-fold speed-up by just efficiently evaluating the log posterior density. This directly translates into a similar magnitude increase in the effective sample size per second achieved by AGESS.</p><div class="admonition is-success"><header class="admonition-header">Key takeaway</header><div class="admonition-body"><p>It is paramount to write efficient functions that evaluate the log posterior density when using AGESS.</p></div></div><p>Tips:</p><ul><li><p>Packages like <code>JET.jl</code> can help catch inefficiencies in coding.</p></li><li><p>Pre-allocate variables (especially for intermediate computations)</p></li><li><p><code>@views</code> can help reduce allocating new arrays when doing computations on subarrays</p></li></ul><h2 id="Block-Updates"><a class="docs-heading-anchor" href="#Block-Updates">Block Updates</a><a id="Block-Updates-1"></a><a class="docs-heading-anchor-permalink" href="#Block-Updates" title="Permalink"></a></h2><p>Writing an efficient <code>log_posterior</code> is crucial, but for high-dimensional target distributions we still perform 1-d updates during the burn-in stage, as well as randomly throughout (as controlled by <code>single_step_prop</code>). However, if your model has structure – such as a hierarchical model where we have conditional independence between blocks of parameters and do not need to compute the entire posterior to calculate the conditional density – we can significantly reduce the computational burden of these 1-d updates by using <code>AGESSSampler</code>&#39;s <code>blocks</code>. Here, we will provide an example of fitting a hierarchical model using these <code>blocks</code> (using a direct specification of the log target density, and separately using the Turing.jl ecosystem).</p><p>Consider a simple hierarchical model:</p><p class="math-container">\[Y_{ig} \sim \mathcal{N}(\theta_g, 1), \qquad \theta_g \sim \mathcal{N}(\mu, 1).\]</p><p>We can simulate data as follows.</p><pre><code class="language-julia hljs">G = 10
 n_g = 200
@@ -134,23 +134,23 @@ end</code></pre><pre class="documenter-example-output"><code class="nohighlight 
     end
     return lpdf
 end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">group_conditional (generic function with 1 method)</code></pre><p>For <span>$G=10$</span> groups of 200 observations each, that&#39;s roughly a 10-fold reduction in the amount of data touched per call:</p><pre><code class="language-julia hljs">Param = vcat(μ_true, θ_true)
-@benchmark hier_log_posterior($Param, $data)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 10000 samples with 9 evaluations per sample.
- Range (min … max):  2.088 μs …   6.001 μs  ┊ GC (min … max): 0.00% … 0.00%
- Time  (median):     2.090 μs               ┊ GC (median):    0.00%
- Time  (mean ± σ):   2.112 μs ± 154.663 ns  ┊ GC (mean ± σ):  0.00% ± 0.00%
+@benchmark hier_log_posterior($Param, $data)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 10000 samples with 10 evaluations per sample.
+ Range (min … max):  1.865 μs …  16.690 μs  ┊ GC (min … max): 0.00% … 0.00%
+ Time  (median):     1.869 μs               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   1.891 μs ± 219.208 ns  ┊ GC (mean ± σ):  0.00% ± 0.00%
 
   █                                                           ▁
-  █▇▇▆▄▆▆▆▆▄▄▃▄▃▃▃▄▅▄▄▃▄▃▄▃▄▃▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▃▆█▇▇ █
-  2.09 μs      Histogram: log(frequency) by time      2.97 μs &lt;
+  █▇▅▄▄▃▄▃▃▃▁▁▄▄▄▁▃▁▁▁▁▄▁▁▄▁▁▃▁▁▁▁▁▁▁▁▁▁▃▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄▇█ █
+  1.87 μs      Histogram: log(frequency) by time      2.68 μs &lt;
 
- Memory estimate: 0 bytes, allocs estimate: 0.</code></pre><pre><code class="language-julia hljs">@benchmark group_conditional(3, $Param, $data)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 10000 samples with 646 evaluations per sample.
- Range (min … max):  190.611 ns … 273.293 ns  ┊ GC (min … max): 0.00% … 0.00%
- Time  (median):     190.628 ns               ┊ GC (median):    0.00%
- Time  (mean ± σ):   192.399 ns ±   4.701 ns  ┊ GC (mean ± σ):  0.00% ± 0.00%
+ Memory estimate: 0 bytes, allocs estimate: 0.</code></pre><pre><code class="language-julia hljs">@benchmark group_conditional(3, $Param, $data)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 10000 samples with 719 evaluations per sample.
+ Range (min … max):  174.388 ns … 236.341 ns  ┊ GC (min … max): 0.00% … 0.00%
+ Time  (median):     175.335 ns               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   176.960 ns ±   4.093 ns  ┊ GC (mean ± σ):  0.00% ± 0.00%
 
-  █▁                                      ▂▂▂▁▁                 ▁
-  ███▆▆▄▅▅▅▆▆▇█▆▆▅▄▃▄▅▃▄▁▄▁▃▄▃▁▃▄▄▆▄▄▄▁▃▆███████████▇▇▆▇▆▆▆▆▆▆▆ █
-  191 ns        Histogram: log(frequency) by time        208 ns &lt;
+     █▅   ▃  ▂                                    ▁▄▃▁          ▁
+  ▇▁▃██▃▁▅█▄▁█▅▇█▇▆▅▄▄▁▄▄▄▁▃▁▃▄▁▄▃▁▁▄▃▁▃▃▄▁▃▃▁▁▁▁▄█████▇▇▆▆▆▆▆▆ █
+  174 ns        Histogram: log(frequency) by time        189 ns &lt;
 
  Memory estimate: 0 bytes, allocs estimate: 0.</code></pre><p>Wiring this into <code>AGESSSampler</code> just means building one <code>AGESSBlock</code> per group with its <code>conditional</code>, plus a block for <code>μ</code> left on the default (full <code>hier_log_posterior</code>) path: <code>μ</code>&#39;s own prior doesn&#39;t touch any <code>θ_g</code>, but each <code>θ_g</code>&#39;s prior depends on <code>μ</code>, so <code>μ</code>&#39;s full conditional needs every group&#39;s <code>θ_g</code> and so isn&#39;t separable the same way.</p><pre><code class="language-julia hljs">blocks = [AGESSBlock([1 + g]; conditional = p -&gt; group_conditional(g, p, data)) for g in 1:G]
 push!(blocks, AGESSBlock([1]))
@@ -205,10 +205,10 @@ chain_turing = sample(full_model(data), agessB, n_MCMC)</code></pre><pre class="
 Iterations        = 1:1:10000
 Number of chains  = 1
 Samples per chain = 10000
-Wall duration     = 2.19 seconds
-Compute duration  = 2.19 seconds
+Wall duration     = 2.15 seconds
+Compute duration  = 2.15 seconds
 parameters        = μ, θ[1], θ[2], θ[3], θ[4], θ[5], θ[6], θ[7], θ[8], θ[9], θ[10]
 internals         = lp
 
 Use `describe(chains)` for summary statistics and quantiles.
-</code></pre><div class="admonition is-success"><header class="admonition-header">Key takeaway</header><div class="admonition-body"><p>If your model has natural conditional independence structure where part of the likelihood does not depend on a block of parameters, <code>AGESSSampler</code>&#39;s <code>blocks</code> keyword can significantly reduce computational costs – particularly in high-dimensional settings. However, correctness depends on <code>conditional</code> actually being a valid restriction of <code>log_posterior</code>. A block left without a <code>conditional</code> always falls back to the full <code>log_posterior</code>, so when in doubt, leave it out rather than risk a subtly wrong <code>conditional</code>.</p></div></div><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../assets/Documentation/">« Documentation</a><a class="docs-footer-nextpage" href="../Banana/">Banana »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Wednesday 26 August 2026 20:33">Wednesday 26 August 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre><div class="admonition is-success"><header class="admonition-header">Key takeaway</header><div class="admonition-body"><p>If your model has natural conditional independence structure where part of the likelihood does not depend on a block of parameters, <code>AGESSSampler</code>&#39;s <code>blocks</code> keyword can significantly reduce computational costs – particularly in high-dimensional settings. However, correctness depends on <code>conditional</code> actually being a valid restriction of <code>log_posterior</code>. A block left without a <code>conditional</code> always falls back to the full <code>log_posterior</code>, so when in doubt, leave it out rather than risk a subtly wrong <code>conditional</code>.</p></div></div><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../assets/Documentation/">« Documentation</a><a class="docs-footer-nextpage" href="../Banana/">Banana »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Wednesday 26 August 2026 22:09">Wednesday 26 August 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
