@@ -54,6 +54,24 @@ matrix and index. If you're using these lower-level functions directly, see the
 [Factor Models tutorial](https://ndmarco.github.io/AdaptEllipticalSliceSampler.jl/stable/generated/Factor/) 
 for the updated usage.
 
+### New in v0.3.0: Block Updates and Resuming Chains
+
+For models with structure -- e.g. a hierarchical model where a parameter's likelihood only
+depends on a subset of the data -- `AGESSSampler` (and `AGESS`) now accept a `blocks` keyword
+that lets you supply a cheaper `conditional` log-density for a block of coordinates, instead of
+always evaluating the full `log_posterior` on every 1-d update. See the
+[Performance Tips](https://ndmarco.github.io/AdaptEllipticalSliceSampler.jl/stable/generated/Performance.md) page for an example.
+
+Long-running chains can also be resumed: `sample(...; save_state = true)` saves the final
+sampler state on the returned chain, and it is retrievable via `AGESS_loadstate`. The last state is then passed into 
+`initial_state` to continue sampling from exactly where a previous run left off (see example below).
+
+```julia
+## using chain as defined above
+chain2 = sample(model, sampler, n_MCMC, initial_state = AGESS_loadstate(chain))
+chain_combined = vcat(chain, chain2)
+```
+
 ### References
 
 If you found this package useful in your own work and want to cite it in a paper, please consider
