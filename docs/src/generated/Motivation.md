@@ -182,8 +182,9 @@ tend to perform poorly in high-dimensional settings---a slight mismatch between 
 the target will lead to significant losses in sampling efficiency, leading to the need for
 adaptation.
 
-**Key Takeaway:** AGESS can offer a significantly faster mixing Markov chain than common
-alternative samplers, especially when the target distribution is elliptically contoured.
+!!! tip "Key takeaway"
+    AGESS can offer a significantly faster mixing Markov chain than common alternative
+    samplers, especially when the target distribution is elliptically contoured.
 
 ## Performance on Complex Target Distributions
 
@@ -390,12 +391,13 @@ computationally fast to compute. However, we can see that the effective number o
 significantly smaller than that of AGESS. Alternatively, the two adaptive sampling schemes that contain
 globally learned parameters (NUTS and ARW) were unable to effectively traverse the target distribution.
 
-One **cautionary takeaway** is that users should not solely rely on ESS as a measure of a
-sampler's performance---particularly when the target distributions are complex. From the graph
-below, if one were only to look at measures of ESS per second and disregard AGESS, one may conclude that
-NUTS would be the best sampler in this situation, despite the fact (unbeknownst to the user)
-that NUTS has trouble exploring the posterior distributions, and may not come close to reaching
-the stationary distribution in the finitely many iterations of the Markov chain.
+!!! warning "Cautionary takeaway"
+    Users should not solely rely on ESS as a measure of a sampler's performance---particularly
+    when the target distributions are complex. From the graph below, if one were only to look
+    at measures of ESS per second and disregard AGESS, one may conclude that NUTS would be the
+    best sampler in this situation, despite the fact (unbeknownst to the user) that NUTS has
+    trouble exploring the posterior distributions, and may not come close to reaching the
+    stationary distribution in the finitely many iterations of the Markov chain.
 
 ````julia
 function ess_per_sec_by_param(chain)
@@ -422,7 +424,10 @@ p
 ````
 ![](Motivation-18.svg)
 
-**Key Takeaway:** AGESS is locally adaptive and gradient free, which allows it to handle targets that have rapidly changing gradients (should they exist). However, the sampler is still also able to make global moves, allowing it to effectively traverse multimodal distributions.
+!!! tip "Key takeaway"
+    AGESS is locally adaptive and gradient free, which allows it to handle targets that have
+    rapidly changing gradients (should they exist). However, the sampler is still also able to
+    make global moves, allowing it to effectively traverse multimodal distributions.
 
 [^1]: N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
 

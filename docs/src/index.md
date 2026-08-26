@@ -4,7 +4,7 @@ This package contains a Julia implementation of adaptive generalized elliptical 
 Adaptive generalized elliptical sliced sampling (AGESS) facilitates Bayesian computation on a wide 
 variety of (lower semi-continuous) target distributions. Specifically, we have illustrated 
 the utility of AGESS across target distributions that are non-differentiable, non-elliptical,
-multi-modal, high-dimensional, and\or are constrained to an open subset of $\mathbb{R}^{P}$. 
+multi-modal, high-dimensional, and/or are constrained to an open subset of $\mathbb{R}^{P}$. 
 Using AGESS to sample from the posterior of your own models is relatively simple and can be 
 broken down into the following steps:
 1. Install Julia and the `AdaptEllipticalSliceSampler.jl` package (See [Installation](assets/install.md) page)
@@ -46,6 +46,24 @@ chain = sample(model, sampler, n_MCMC)
 an explicit `rng` argument and take separate `x_prev`/`x_new` vectors instead of a shared 
 matrix and index. If you're using these lower-level functions directly, see the 
 [Factor Models tutorial](generated/Factor.md) for the updated usage.
+
+### New in v0.3.0: Block Updates and Resuming Chains
+
+For models with structure -- e.g. a hierarchical model where a parameter's likelihood only
+depends on a subset of the data -- `AGESSSampler` (and `AGESS`) now accept a `blocks` keyword
+that lets you supply a cheaper `conditional` log-density for a block of coordinates, instead of
+always evaluating the full `log_posterior` on every 1-d update. See the
+[Performance Tips](generated/Performance.md) page for an example.
+
+Long-running chains can also be resumed: `sample(...; save_state = true)` saves the final
+sampler state on the returned chain, and it is retrievable via `AGESS_loadstate`. The last state is then passed into 
+`initial_state` to continue sampling from exactly where a previous run left off (see example below).
+
+```julia
+## using chain as defined above
+chain2 = sample(model, sampler, n_MCMC; initial_state = AGESS_loadstate(chain))
+chain_combined = vcat(chain, chain2)
+```
 
 ### References
 

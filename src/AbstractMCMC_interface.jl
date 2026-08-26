@@ -33,6 +33,7 @@ struct AGESSSampler{Y<:AbstractFloat, V<:AbstractVector{Y}, M<:AbstractMatrix{Y}
     β::Y
     w_const::Y
     t_dist::Bool
+    blocks::Union{Vector{AGESSBlock}, Nothing}
 end
 
 """
@@ -54,6 +55,7 @@ An `AbstractMCMC.AbstractSampler` implementing adaptive generalized elliptical s
 - `ϵ::AbstractFloat = 0.05`: the proportion of non-adaptive transitions
 - `single_step_prop::AbstractFloat = 0.05`: the proportion of transitions where we perform one-dimensional updates (P >= 10)
 - `β::AbstractFloat = 0.5`: the rate at which the adaptation diminishes
+- `blocks::Union{Vector{AGESSBlock}, Nothing} ` = vector of AGESSBlocks used to speed up 1-D updates in warm-up and for single_step_prop iterations
 
 # References
 N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv preprint arXiv:2605.21659, 2026.
@@ -61,7 +63,10 @@ N. Marco and S. T. Tokdar. Adaptive generalized elliptical slice sampling. arXiv
 function AGESSSampler(P::Integer, n_MCMC::Integer;
                       μ_0::Union{AbstractVector{Y}, Y} = 0.0, Σ_0::Union{AbstractMatrix{Y}, Y} = 1.0,
                       init_x::Union{AbstractVector{Y}, Y} = 0.0, t_dist::Bool = true, ν::Y = 6.0, burnin::Y = 0.5,
-                      ϵ::Y = 0.05, single_step_prop::Y = 0.05, β::Y = 0.5) where {Y<:AbstractFloat}
+                      ϵ::Y = 0.05, single_step_prop::Y = 0.05, β::Y = 0.5,
+                      blocks::Union{Vector{AGESSBlock}, Nothing} = nothing) where {Y<:AbstractFloat}
+
+    _check_blocks(blocks, P)
 
     # Get prior mean parameter
     if typeof(μ_0) <: AbstractFloat
@@ -97,16 +102,18 @@ function AGESSSampler(P::Integer, n_MCMC::Integer;
     w_const = max(2/3, ((cbrt(P) - 1) / cbrt(P)))
 
     return AGESSSampler(μ_0, Σ_0, Σ_0_chol, init_x, Int(P), Int(n_MCMC), ν, burnin, ϵ,
-                        single_step_prop, β, w_const, t_dist)
+                        single_step_prop, β, w_const, t_dist, blocks)
 end
 
 
 function AGESSSampler(model::AbstractMCMC.AbstractModel, n_MCMC::Integer;
                       μ_0::Union{AbstractVector{Y}, Y} = 0.0, Σ_0::Union{AbstractMatrix{Y}, Y} = 1.0,
                       init_x::Union{AbstractVector{Y}, Y} = 0.0, t_dist::Bool = true, ν::Y = 6.0, burnin::Y = 0.5,
-                      ϵ::Y = 0.05, single_step_prop::Y = 0.05, β::Y = 0.5) where {Y<:AbstractFloat}
+                      ϵ::Y = 0.05, single_step_prop::Y = 0.05, β::Y = 0.5,
+                      blocks::Union{Vector{AGESSBlock}, Nothing} = nothing) where {Y<:AbstractFloat}
 
     P = _dimension(model)
+    _check_blocks(blocks, P)
     # Get prior mean parameter
     if typeof(μ_0) <: AbstractFloat
         μ_0 = ones(typeof(μ_0), P) .* μ_0
@@ -141,7 +148,21 @@ function AGESSSampler(model::AbstractMCMC.AbstractModel, n_MCMC::Integer;
     w_const = max(2/3, ((cbrt(P) - 1) / cbrt(P)))
 
     return AGESSSampler(μ_0, Σ_0, Σ_0_chol, init_x, Int(P), Int(n_MCMC), ν, burnin, ϵ,
-                        single_step_prop, β, w_const, t_dist)
+                        single_step_prop, β, w_const, t_dist, blocks)
+end
+
+"""
+    _check_blocks(blocks, P)
+
+Validates that `blocks` (if not `nothing`) partitions `1:P` exactly -- every coordinate
+belongs to exactly one block.
+"""
+function _check_blocks(blocks::Union{Vector{AGESSBlock}, Nothing}, P::Integer)
+    if blocks !== nothing
+        covered = sort(reduce(vcat, [block.indices for block in blocks]))
+        @argcheck covered == collect(1:P) "blocks must partition 1:P=1:$(P) exactly (each coordinate in exactly one block); got coverage $(covered)"
+    end
+    return nothing
 end
 
 """
@@ -164,6 +185,7 @@ mutable struct AGESSState{Y<:AbstractFloat, V<:AbstractVector{Y}, M<:AbstractMat
     iteration::Int
     n_j::Int
     N_J::Int
+    single_step_phase_done::Bool   # sticky once true; see `AGESS_loadstate`
 end
 
 """
@@ -195,41 +217,19 @@ function _initial_step(rng::Random.AbstractRNG, model::AbstractMCMC.AbstractMode
         cholesky(sampler.Σ_0),      # Σ_chol_adapt_ph
         similar(x_current),         # ph_AGESS
         similar(x_current),         # z
-        randperm(rng, sampler.P),   # perm
+        randperm(rng, sampler.blocks === nothing ? sampler.P : length(sampler.blocks)),   # perm
         similar(x_current),         # ph_cholesky_update
         1,                          # iteration
         2,                          # n_j
         2,                          # N_j
+        false,                      # single_step_phase_done
     )
 
     return AGESSTransition(copy(x_current), lpdf_current), state
 end
 
 function AbstractMCMC.step(rng::Random.AbstractRNG, model::AbstractMCMC.AbstractModel, sampler::AGESSSampler; kwargs...)
-    @argcheck _dimension(model) == sampler.P "Sampler was constructed for dimension $(sampler.P) but model has dimension $(_dimension(model))"
-
-    x_current = deepcopy(sampler.init_x)
-    lpdf_current = _logdensity(model, x_current)
-    @argcheck isfinite(lpdf_current) "Initial starting position of Markov chain must have finite posterior density"
-
-    state = AGESSState(
-        x_current,                  # x_current
-        deepcopy(x_current),        # x_next
-        lpdf_current,               # lpdf_current
-        deepcopy(sampler.μ_0),      # μ_adapt
-        cholesky(sampler.Σ_0),      # Σ_chol_adapt
-        deepcopy(sampler.μ_0),      # μ_adapt_ph
-        cholesky(sampler.Σ_0),      # Σ_chol_adapt_ph
-        similar(x_current),         # ph_AGESS
-        similar(x_current),         # z
-        randperm(rng, sampler.P),   # perm
-        similar(x_current),         # ph_cholesky_update
-        1,                          # iteration
-        2,                          # n_j
-        2,                          # N_j
-    )
-
-    return AGESSTransition(copy(x_current), lpdf_current), state
+    return _initial_step(rng, model, sampler; kwargs...)
 end
 
 function AbstractMCMC.step(rng::Random.AbstractRNG, model::AbstractMCMC.AbstractModel, sampler::AGESSSampler,
@@ -239,29 +239,42 @@ function AbstractMCMC.step(rng::Random.AbstractRNG, model::AbstractMCMC.Abstract
     P = sampler.P
     burnin_num = floor(Int, sampler.burnin * sampler.n_MCMC)
     log_posterior(x) = _logdensity(model, x)
+    use_blocks = sampler.blocks !== nothing
 
-    if P >= 10
-        if i < (burnin_num * sampler.single_step_prop)
-            # if high-dimensional: conduct 1-d updates for faster convergence at the beginning of the chain
-            state.lpdf_current = AGESS_single_step_1d!(state.x_current, state.x_next, log_posterior, sampler.t_dist,
-                                                        sampler.ν, state.μ_adapt, state.Σ_chol_adapt.L,
-                                                        state.lpdf_current, state.perm; rng = rng)
+    # Runs either a full sweep of user-defined block updates (if `sampler.blocks` was given) or
+    # the default per-coordinate 1-d update sweep -- whichever the sampler was configured for.
+    function do_1d_or_block_update()
+        if use_blocks
+            return AGESS_single_step_blocks!(state.x_current, state.x_next, log_posterior, sampler.t_dist,
+                                             sampler.ν, state.μ_adapt, state.Σ_chol_adapt.L, state.lpdf_current,
+                                             sampler.blocks, state.perm; rng = rng)
         else
+            return AGESS_single_step_1d!(state.x_current, state.x_next, log_posterior, sampler.t_dist,
+                                         sampler.ν, state.μ_adapt, state.Σ_chol_adapt.L,
+                                         state.lpdf_current, state.perm; rng = rng)
+        end
+    end
+
+    if P >= 10 || use_blocks
+        if !state.single_step_phase_done && i < (burnin_num * sampler.single_step_prop)
+            # if high-dimensional (or blocks were supplied): conduct 1-d/block updates for faster convergence at the beginning of the chain
+            state.lpdf_current = do_1d_or_block_update()
+        else
+            state.single_step_phase_done = true
+
             # Conduct transition using adaptive kernel
             if rand(rng) > (sampler.ϵ + sampler.single_step_prop)
                 state.lpdf_current = AGESS_single_step!(state.x_current, state.x_next, state.z, log_posterior, sampler.t_dist,
-                                                         sampler.ν, P, state.ph_AGESS, state.μ_adapt, state.Σ_chol_adapt.L,
-                                                         state.lpdf_current; rng = rng)
-            # Conduct transition using 1-d update
+                                                        sampler.ν, P, state.ph_AGESS, state.μ_adapt, state.Σ_chol_adapt.L,
+                                                        state.lpdf_current; rng = rng)
+            # Conduct transition using 1-d/block update
             elseif rand(rng) < (sampler.single_step_prop / (sampler.ϵ + sampler.single_step_prop))
-                state.lpdf_current = AGESS_single_step_1d!(state.x_current, state.x_next, log_posterior, sampler.t_dist,
-                                                            sampler.ν, state.μ_adapt, state.Σ_chol_adapt.L,
-                                                            state.lpdf_current, state.perm; rng = rng)
+                state.lpdf_current = do_1d_or_block_update()
             # Conduct transition using non-adaptive kernel (standard GESS)
             else
                 state.lpdf_current = AGESS_single_step!(state.x_current, state.x_next, state.z, log_posterior, sampler.t_dist,
-                                                         sampler.ν, P, state.ph_AGESS, sampler.μ_0, sampler.Σ_0_chol.L,
-                                                         state.lpdf_current; rng = rng)
+                                                        sampler.ν, P, state.ph_AGESS, sampler.μ_0, sampler.Σ_0_chol.L,
+                                                        state.lpdf_current; rng = rng)
             end
         end
     else
@@ -269,13 +282,13 @@ function AbstractMCMC.step(rng::Random.AbstractRNG, model::AbstractMCMC.Abstract
         ## Conduct transition using adaptive kernel
         if rand(rng) > sampler.ϵ
             state.lpdf_current = AGESS_single_step!(state.x_current, state.x_next, state.z, log_posterior, sampler.t_dist,
-                                                     sampler.ν, P, state.ph_AGESS, state.μ_adapt, state.Σ_chol_adapt.L,
-                                                     state.lpdf_current; rng = rng)
+                                                    sampler.ν, P, state.ph_AGESS, state.μ_adapt, state.Σ_chol_adapt.L,
+                                                    state.lpdf_current; rng = rng)
         ## Conduct transition using non-adaptive kernel (prior)
         else
             state.lpdf_current = AGESS_single_step!(state.x_current, state.x_next, state.z, log_posterior, sampler.t_dist,
-                                                     sampler.ν, P, state.ph_AGESS, sampler.μ_0, sampler.Σ_0_chol.L,
-                                                     state.lpdf_current; rng = rng)
+                                                    sampler.ν, P, state.ph_AGESS, sampler.μ_0, sampler.Σ_0_chol.L,
+                                                    state.lpdf_current; rng = rng)
         end
     end
 
