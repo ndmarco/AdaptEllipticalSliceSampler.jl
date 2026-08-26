@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Performance Tips · AdaptEllipticalSliceSampler</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="AdaptEllipticalSliceSampler logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">AdaptEllipticalSliceSampler</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Introduction</a></li><li><a class="tocitem" href="../Motivation/">Why AGESS?</a></li><li><a class="tocitem" href="../../assets/install/">Installation</a></li><li><a class="tocitem" href="../../assets/Documentation/">Documentation</a></li><li class="is-active"><a class="tocitem" href>Performance Tips</a><ul class="internal"><li><a class="tocitem" href="#Use-of-Turing-Models"><span>Use of Turing Models</span></a></li><li><a class="tocitem" href="#Linear-Regression"><span>Linear Regression</span></a></li></ul></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../Banana/">Banana</a></li><li><a class="tocitem" href="../BayesNN/">Bayesian Neural Networks</a></li><li><a class="tocitem" href="../Constrained/">Constrained Inference</a></li><li><a class="tocitem" href="../Deep_GP/">Deep GP Surrogates</a></li><li><a class="tocitem" href="../Regression/">Regression</a></li></ul></li><li><span class="tocitem">Advanced Tutorials</span><ul><li><a class="tocitem" href="../Factor/">Factor Models</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Performance Tips</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Performance Tips</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/ndmarco/AdaptEllipticalSliceSampler.jl/blob/main/docs/literate/Performance.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Performance-Tips"><a class="docs-heading-anchor" href="#Performance-Tips">Performance Tips</a><a id="Performance-Tips-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Tips" title="Permalink"></a></h1><p>Julia is a dynamic programming language that allows for high performance computing. However, Julia features optional typing can lead to slow performance. Since the <code>AGESS</code> function essentially only requires the user to specify a function evaluating the log target distribution, it is paramount that the user specifies an efficient implementation of this function, as this function will constantly be called in the <code>AGESS</code> function. Here, we will give a quick example of 3 evaluations of the same target distribution; each leading to different computational costs. While a full guide to writing performance oriented code in Julia is out of the scope of this documentation, here are some useful resources:</p><ul><li><p><a href="https://docs.julialang.org/en/v1/manual/performance-tips/">Performance Tips from Julia</a></p></li><li><p><a href="https://julialang.org/learning/">Learning Resources for Julia</a></p></li><li><p><a href="https://aviatesk.github.io/JET.jl/dev/">JET.jl</a></p></li><li><p><a href="https://juliaci.github.io/BenchmarkTools.jl/stable/">BenchmarkTools.jl</a></p></li></ul><p><a href="../notebooks/Performance.ipynb">Download this page as a Jupyter notebook</a></p><h2 id="Use-of-Turing-Models"><a class="docs-heading-anchor" href="#Use-of-Turing-Models">Use of Turing Models</a><a id="Use-of-Turing-Models-1"></a><a class="docs-heading-anchor-permalink" href="#Use-of-Turing-Models" title="Permalink"></a></h2><p>As of version 0.2.0, users are able to specify a <a href="https://turinglang.org/">Turing.jl</a> model instead of supplying a function that efficiently evaluates the log posterior density. Thus, we refer users to the <code>Turing.jl</code> documentation for tips on improving performance.</p><ul><li><a href="https://turinglang.org/docs/usage/performance-tips/">Performance Tips for Turing.jl</a></li></ul><h2 id="Linear-Regression"><a class="docs-heading-anchor" href="#Linear-Regression">Linear Regression</a><a id="Linear-Regression-1"></a><a class="docs-heading-anchor-permalink" href="#Linear-Regression" title="Permalink"></a></h2><p>Consider the standard model for linear regression (see the &quot;Regression&quot; tutorial for more details):</p><p class="math-container">\[Y_i \sim \mathcal{N}(\mathbf{x}_i&#39; \boldsymbol{\beta}, \sigma^2),\]</p><p class="math-container">\[\boldsymbol{\beta} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}),\]</p><p class="math-container">\[\sigma^2 \sim \text{Inv-Gamma}(1,1).\]</p><p>Let&#39;s consider a simple implementation of this function, where we do not specify any types:</p><pre><code class="language-julia hljs">import Random
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Performance Tips · AdaptEllipticalSliceSampler</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.png" alt="AdaptEllipticalSliceSampler logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">AdaptEllipticalSliceSampler</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Introduction</a></li><li><a class="tocitem" href="../Motivation/">Why AGESS?</a></li><li><a class="tocitem" href="../../assets/install/">Installation</a></li><li><a class="tocitem" href="../../assets/Documentation/">Documentation</a></li><li class="is-active"><a class="tocitem" href>Performance Tips</a><ul class="internal"><li><a class="tocitem" href="#Use-of-Turing-Models"><span>Use of Turing Models</span></a></li><li><a class="tocitem" href="#Linear-Regression"><span>Linear Regression</span></a></li><li><a class="tocitem" href="#Block-Updates"><span>Block Updates</span></a></li></ul></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../Banana/">Banana</a></li><li><a class="tocitem" href="../BayesNN/">Bayesian Neural Networks</a></li><li><a class="tocitem" href="../Constrained/">Constrained Inference</a></li><li><a class="tocitem" href="../Deep_GP/">Deep GP Surrogates</a></li><li><a class="tocitem" href="../Regression/">Regression</a></li></ul></li><li><span class="tocitem">Advanced Tutorials</span><ul><li><a class="tocitem" href="../Factor/">Factor Models</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Performance Tips</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Performance Tips</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/ndmarco/AdaptEllipticalSliceSampler.jl/blob/main/docs/literate/Performance.jl" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Performance-Tips"><a class="docs-heading-anchor" href="#Performance-Tips">Performance Tips</a><a id="Performance-Tips-1"></a><a class="docs-heading-anchor-permalink" href="#Performance-Tips" title="Permalink"></a></h1><p>Julia is a dynamic programming language that allows for high performance computing. However, Julia&#39;s optional typing can lead to slow performance if left unspecified. Since the <code>AGESS</code> function essentially only requires the user to specify a function evaluating the log target distribution, it is paramount that the user specifies an efficient implementation of this function, as this function will constantly be called in the <code>AGESS</code> function. Here, we will give a quick example of 3 evaluations of the same target distribution; each leading to different computational costs. While a full guide to writing performance oriented code in Julia is out of the scope of this documentation, here are some useful resources:</p><ul><li><p><a href="https://docs.julialang.org/en/v1/manual/performance-tips/">Performance Tips from Julia</a></p></li><li><p><a href="https://julialang.org/learning/">Learning Resources for Julia</a></p></li><li><p><a href="https://aviatesk.github.io/JET.jl/dev/">JET.jl</a></p></li><li><p><a href="https://juliaci.github.io/BenchmarkTools.jl/stable/">BenchmarkTools.jl</a></p></li></ul><p><a href="../notebooks/Performance.ipynb">Download this page as a Jupyter notebook</a></p><h2 id="Use-of-Turing-Models"><a class="docs-heading-anchor" href="#Use-of-Turing-Models">Use of Turing Models</a><a id="Use-of-Turing-Models-1"></a><a class="docs-heading-anchor-permalink" href="#Use-of-Turing-Models" title="Permalink"></a></h2><p>As of version 0.2.0, users are able to specify a <a href="https://turinglang.org/">Turing.jl</a> model instead of supplying a function that efficiently evaluates the log posterior density. Thus, we refer users to the <code>Turing.jl</code> documentation for tips on improving performance.</p><ul><li><a href="https://turinglang.org/docs/usage/performance-tips/">Performance Tips for Turing.jl</a></li></ul><h2 id="Linear-Regression"><a class="docs-heading-anchor" href="#Linear-Regression">Linear Regression</a><a id="Linear-Regression-1"></a><a class="docs-heading-anchor-permalink" href="#Linear-Regression" title="Permalink"></a></h2><p>Consider the standard model for linear regression (see the &quot;Regression&quot; tutorial for more details):</p><p class="math-container">\[Y_i \sim \mathcal{N}(\mathbf{x}_i&#39; \boldsymbol{\beta}, \sigma^2),\]</p><p class="math-container">\[\boldsymbol{\beta} \sim \mathcal{N}(\mathbf{0}, \mathbf{I}),\]</p><p class="math-container">\[\sigma^2 \sim \text{Inv-Gamma}(1,1).\]</p><p>Let&#39;s consider a simple implementation of this function, where we do not specify any types:</p><pre><code class="language-julia hljs">import Random
 import LogExpFunctions
 using BenchmarkTools
 using AdaptEllipticalSliceSampler
@@ -34,16 +34,16 @@ D = 10
 
 # Benchmark function
 Param = ones(D + 1)
-@benchmark lm_log_posterior_1($Param, $X, $y)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 361 samples with 1 evaluation per sample.
- Range (min … max):   7.618 ms … 372.345 ms  ┊ GC (min … max):  0.00% … 97.77%
- Time  (median):      7.844 ms               ┊ GC (median):     0.00%
- Time  (mean ± σ):   13.877 ms ±  41.708 ms  ┊ GC (mean ± σ):  41.89% ± 16.30%
+@benchmark lm_log_posterior_1($Param, $X, $y)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 365 samples with 1 evaluation per sample.
+ Range (min … max):   8.276 ms … 368.561 ms  ┊ GC (min … max):  0.00% … 97.65%
+ Time  (median):      8.445 ms               ┊ GC (median):     0.00%
+ Time  (mean ± σ):   13.703 ms ±  37.376 ms  ┊ GC (mean ± σ):  34.64% ± 14.94%
 
-  █                                                             
-  █▁▁▁▁▁▁▆▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄ ▅
-  7.62 ms       Histogram: log(frequency) by time       352 ms &lt;
+  █ ▃▁ ▁▂                                                       
+  █▄██▅███▅▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▆ ▆
+  8.28 ms       Histogram: log(frequency) by time      51.6 ms &lt;
 
- Memory estimate: 22.92 MiB, allocs estimate: 37.</code></pre><p>Let&#39;s see if we can improve on this by pre-allocating some of our variables and specifying the type of variables.</p><pre><code class="language-julia hljs">function lm_log_posterior_2(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
+ Memory estimate: 22.92 MiB, allocs estimate: 39.</code></pre><p>Let&#39;s see if we can improve on this by pre-allocating some of our variables and specifying the type of variables.</p><pre><code class="language-julia hljs">function lm_log_posterior_2(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
                             y::AbstractVector{Y}, μ::AbstractVector{Y},
                             μ_0::AbstractVector{Y}, Σ_I_N::AbstractMatrix{Y},
                             Σ_I_P::AbstractMatrix{Y}) where {Y&lt;:AbstractFloat}
@@ -61,16 +61,16 @@ end
 Σ_I_N = diagm(ones(1000))
 Σ_I_P = diagm(ones(D))
 μ_0 = zeros(D)
-@benchmark lm_log_posterior_2($Param, $X, $y, $μ, $μ_0, $Σ_I_N, $Σ_I_P)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 584 samples with 1 evaluation per sample.
- Range (min … max):  7.450 ms …  11.196 ms  ┊ GC (min … max): 0.00% … 15.52%
- Time  (median):     8.789 ms               ┊ GC (median):    9.17%
- Time  (mean ± σ):   8.573 ms ± 941.405 μs  ┊ GC (mean ± σ):  9.91% ±  8.97%
+@benchmark lm_log_posterior_2($Param, $X, $y, $μ, $μ_0, $Σ_I_N, $Σ_I_P)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 547 samples with 1 evaluation per sample.
+ Range (min … max):  8.087 ms …  10.456 ms  ┊ GC (min … max):  0.00% … 16.65%
+ Time  (median):     9.917 ms               ┊ GC (median):    16.92%
+ Time  (mean ± σ):   9.145 ms ± 940.006 μs  ┊ GC (mean ± σ):   9.63% ±  8.73%
 
-   ▁█▅▁                                  ▃▆▃▁                  
-  ▄████▇▅▅▃▁▃▃▂▂▂▂▁▃▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄▇████▅▅▂▃▃▃▂▃▂▂▁▁▂▂▁▂ ▃
-  7.45 ms         Histogram: frequency by time        10.3 ms &lt;
+   ▃█▅▁                                                ▅▂▁     
+  ▃████▄▃▃▂▁▁▁▁▁▂▂▁▁▁▁▁▁▁▁▁▁▁▁▂▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▄▄█████▅▄ ▃
+  8.09 ms         Histogram: frequency by time        10.2 ms &lt;
 
- Memory estimate: 15.28 MiB, allocs estimate: 21.</code></pre><p>We can see that there was a modest improvement in performance. We can see that we are allocating less memory. However, it is slow to actually construct these multivariate distributions and evaluate the log pdf of these distributions. We can just perform the calculations ourselves and get significantly better performance. Since Julia is compiled just-in-time, we should feel free to use for-loops as we please! (Unlike R)</p><pre><code class="language-julia hljs">function lm_log_posterior_3(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
+ Memory estimate: 15.28 MiB, allocs estimate: 23.</code></pre><p>We can see that there was a modest improvement in performance. We can see that we are allocating less memory. However, it is slow to actually construct these multivariate distributions and evaluate the log pdf of these distributions. We can just perform the calculations ourselves and get significantly better performance. Since Julia is compiled just-in-time, we should feel free to use for-loops as we please! (Unlike R)</p><pre><code class="language-julia hljs">function lm_log_posterior_3(Param::AbstractVector{Y}, X::AbstractMatrix{Y},
                             y::AbstractVector{Y}, ph::AbstractVector{Y}) where {Y&lt;: AbstractFloat}
     P = length(Param)
     # Normal Likelihood
@@ -91,12 +91,124 @@ end
 
 ph = zeros(1000)
 @benchmark lm_log_posterior_3($Param, $X, $y, $ph)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 10000 samples with 9 evaluations per sample.
- Range (min … max):  2.123 μs … 298.950 μs  ┊ GC (min … max):  0.00% … 97.63%
- Time  (median):     2.525 μs               ┊ GC (median):     0.00%
- Time  (mean ± σ):   3.134 μs ±  11.770 μs  ┊ GC (mean ± σ):  17.93% ±  4.76%
+ Range (min … max):  2.497 μs … 213.659 μs  ┊ GC (min … max):  0.00% … 91.35%
+ Time  (median):     2.872 μs               ┊ GC (median):     0.00%
+ Time  (mean ± σ):   3.365 μs ±   8.859 μs  ┊ GC (mean ± σ):  12.17% ±  4.56%
 
-            ▁▅██▆▅▃▁                                           
-  ▂▂▂▂▂▂▃▄▄▇████████▇▆▄▄▃▃▃▃▂▂▂▂▂▂▂▂▂▂▂▁▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂ ▃
-  2.12 μs         Histogram: frequency by time         3.8 μs &lt;
+      ▂▂▄▆▇███▇▆▅▃▃▂▁                                         ▃
+  ▃▆▇██████████████████▇█▇█▇▆▆▆▆▅▅▄▅▅▅▁▃▃▄▅▆▆█▇█▇▇▇▇▆▆▅▄▆▆▅▅▅ █
+  2.5 μs       Histogram: log(frequency) by time      4.58 μs &lt;
 
- Memory estimate: 7.88 KiB, allocs estimate: 3.</code></pre><p>We can see that we have a 1000-fold speed-up by just efficiently evaluating the log posterior density. This directly translates into a similar magnitude increase in the effective sample size per second achieved by AGESS.</p><div class="admonition is-success"><header class="admonition-header">Key takeaway</header><div class="admonition-body"><p>It is paramount to write efficient functions that evaluate the log posterior density when using AGESS.</p></div></div><p>Tips:</p><ul><li><p>Packages like <code>JET.jl</code> can help catch inefficiencies in coding.</p></li><li><p>Pre-allocate variables (especially for intermediate computations)</p></li><li><p><code>@views</code> can help reduce allocating new arrays when doing computations on subarrays</p></li></ul><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../assets/Documentation/">« Documentation</a><a class="docs-footer-nextpage" href="../Banana/">Banana »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Tuesday 4 August 2026 15:40">Tuesday 4 August 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ Memory estimate: 7.88 KiB, allocs estimate: 3.</code></pre><p>We can see that we have a 1000-fold speed-up by just efficiently evaluating the log posterior density. This directly translates into a similar magnitude increase in the effective sample size per second achieved by AGESS.</p><div class="admonition is-success"><header class="admonition-header">Key takeaway</header><div class="admonition-body"><p>It is paramount to write efficient functions that evaluate the log posterior density when using AGESS.</p></div></div><p>Tips:</p><ul><li><p>Packages like <code>JET.jl</code> can help catch inefficiencies in coding.</p></li><li><p>Pre-allocate variables (especially for intermediate computations)</p></li><li><p><code>@views</code> can help reduce allocating new arrays when doing computations on subarrays</p></li></ul><h2 id="Block-Updates"><a class="docs-heading-anchor" href="#Block-Updates">Block Updates</a><a id="Block-Updates-1"></a><a class="docs-heading-anchor-permalink" href="#Block-Updates" title="Permalink"></a></h2><p>Writing an efficient <code>log_posterior</code> is crucial, but for high-dimensional target distributions we still perform 1-d updates during the burn-in stage, as well as randomly throughout (as controlled by <code>single_step_prop</code>). However, if your model has structure – such as a hierarchical model where we have conditional independence between blocks of parameters and do not need to compute the entire posterior to calculate the conditional density – we can significantly reduce the computational burden of these 1-d updates by using <code>AGESSSampler</code>&#39;s <code>blocks</code>. Here, we will provide an example of fitting a hierarchical model using these <code>blocks</code> (using a direct specification of the log target density, and separately using the Turing.jl ecosystem).</p><p>Consider a simple hierarchical model:</p><p class="math-container">\[Y_{ig} \sim \mathcal{N}(\theta_g, 1), \qquad \theta_g \sim \mathcal{N}(\mu, 1).\]</p><p>We can simulate data as follows.</p><pre><code class="language-julia hljs">G = 10
+n_g = 200
+μ_true = 1.0
+θ_true = μ_true .+ 0.5 .* randn(G)
+data = [θ_true[g] .+ randn(n_g) for g in 1:G]</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-element Vector{Vector{Float64}}:
+ [0.9013990275798104, 1.7307604482841636, -0.623100376503377, -0.13626100150521725, 2.3776935605153544, 1.5178728186576, 1.477497849118865, 2.239571689283943, 2.3690365722971816, -0.301515826607999  …  -0.16035580728950938, 2.790784059742017, 1.2119798149388559, -0.28000800914663115, -0.09858246591906183, 0.4575823058461617, 0.9470118576737067, 2.629708964219551, 0.16697007806513375, 1.2056572080848516]
+ [-0.2895687139352876, 1.93968277845019, 0.4273493223250098, 0.3949525468384877, 0.667677415236551, -1.0942290547841371, 1.4310211762876364, 0.09382217818706776, -1.3510997237165698, -0.35247207611343623  …  0.1487673759140855, -0.5421755704049742, -0.7766918853168839, -0.7704489581622468, -0.963660293797732, -0.86011779784858, -0.3971408475574375, 0.7838050640559421, 0.5088274741608093, -1.2528090209821592]
+ [-1.2948081769800162, 0.48685354802263714, 0.4263755143914767, 1.1748975472591585, -0.21515557053532808, 0.09632389451171897, 0.5891319124903814, -0.9140941207875157, -2.2365878774921466, 0.7723878401557069  …  1.203064638212455, 0.3372363311075946, -0.28949900948721297, 2.205152766314879, 1.2923008944670742, -0.9321550977366384, 3.576398697273053, 0.5976545197076552, 3.1056782071418176, 2.095882758653833]
+ [3.8503460127098585, 0.880844685454626, 2.206836650214337, 1.8423658651058457, 0.1480994792823982, 1.4282533496319747, 2.3356999479513045, 0.7212006933358586, 2.77986461609928, 0.8593652469360468  …  2.292634093679932, 1.870178497961332, 1.289676995596944, 0.830432613388464, 1.0516599690628596, 2.0231416238297486, 2.4203898466657527, 3.3546169274048694, -0.005859359795444163, 2.6048664594752697]
+ [-0.3626684322755145, -0.029564961268190304, 1.9501633720055718, 1.894668583577091, 1.4916487639951155, -0.5900977287577189, 0.9259378132992652, -0.1142665852342668, 0.6819602093361499, 1.086703119350226  …  0.41161074894409344, 1.6633974312699018, 0.09283895994066371, 0.5331190565561723, 2.238614903236373, 1.3739724041372503, -0.7200596787708362, 1.0459714883497535, 2.030651815407884, 0.8654255534897668]
+ [0.5977450963162596, 1.836370442550111, 0.8564207576815919, 0.62878251171116, 0.9894110385224424, -2.049685798630513, 1.4860898455231764, 1.397702139385692, 0.6980894470544547, -0.9701654854571562  …  0.36054537137208303, 2.1771153415602593, -0.877038136718554, 0.0006603858513627991, -0.32903274181027686, 0.002424045741097669, -0.45544093326951574, -0.03375981636478087, 0.004024223310775288, 0.8272286936165316]
+ [1.6121439856714603, 0.1925965909535161, -0.18216793599663383, 1.1648629790888203, 0.1846768246912467, 0.5638746490321391, 1.5072326874105646, 1.1635806679422702, 0.4303583479287658, 1.2629145168394098  …  1.528717807119023, 0.6789926360165481, 0.49633866939861354, 2.903162254791212, 0.6343836837930593, 0.48140717865674937, 0.49559608141161016, -0.40952400890913754, 1.113153770450085, -0.08956967309535702]
+ [1.6329406331461342, 0.6192483872070771, 1.393648370407991, 0.26488483352855774, 2.866527015819166, 2.7139137605229253, 1.7719598616368009, 0.10623532494421428, 1.9505562825735772, 1.2783080463418335  …  0.8773324574756023, 1.5555650573529873, -0.7076037103098283, 0.49460788786734355, 0.5651157330310004, 1.3334725562573277, 0.5932483637806119, 3.0505066844125164, 1.2268209974440247, 1.388093005580309]
+ [1.6201888600644427, 1.1246082469322847, 2.097238244257407, 0.8014206027736686, 0.13645015350504164, 2.052482096021071, -0.26616252263691653, 1.9498428109012775, 0.1447729342709031, 0.5905778626689122  …  1.5933034871256606, 1.7528424662085331, -0.021936575230382283, 0.7627075928006294, 1.61725793763542, 2.1182990738203267, 0.8429952005380029, 2.0321106523025145, 2.849380085321948, 0.7736069933552765]
+ [-0.04176972235630627, 2.2944855096113597, 0.7714979425121953, 1.9490810432306551, 0.03337941903078778, 0.19647146125090587, 1.19532101732616, 2.18717052487714, 1.4532337909560795, 1.8381652965528872  …  -0.19456791883100544, 0.6228428458276778, 0.9781768432987676, 0.950620942144146, 1.7883235076918789, -0.3322375720398192, 1.6774304369228714, 1.1864766021297555, 1.6512230030361175, 0.901715245362382]</code></pre><p>We will first start by explicitly specifying the blocks and the log target density.</p><pre><code class="language-julia hljs"># Param layout: Param[1] = μ, Param[1+g] = θ_g for g in 1:G.
+function hier_log_posterior(Param::AbstractVector{Y}, data) where {Y&lt;:AbstractFloat}
+    μ = Param[1]
+    lpdf = -0.5 * μ^2
+    for g in eachindex(data)
+        θ_g = Param[1 + g]
+        lpdf += -0.5 * (θ_g - μ)^2
+        for y in data[g]
+            lpdf += -0.5 * (y - θ_g)^2
+        end
+    end
+    return lpdf
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">hier_log_posterior (generic function with 1 method)</code></pre><p>The full <code>hier_log_posterior</code> above touches every group&#39;s data on every call, even when only <code>θ_g</code> for one group is changing. A block&#39;s <code>conditional</code> gets to see the same full parameter vector, but only needs to return the parts of the density that actually depend on its own block. Here, updating <code>θ_g</code> only needs group <code>g</code>&#39;s own data:</p><pre><code class="language-julia hljs">function group_conditional(g::Integer, Param::AbstractVector{Y}, data) where {Y&lt;:AbstractFloat}
+    μ = Param[1]
+    θ_g = Param[1 + g]
+    lpdf = -0.5 * (θ_g - μ)^2
+    for y in data[g]
+        lpdf += -0.5 * (y - θ_g)^2
+    end
+    return lpdf
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">group_conditional (generic function with 1 method)</code></pre><p>For <span>$G=10$</span> groups of 200 observations each, that&#39;s roughly a 10-fold reduction in the amount of data touched per call:</p><pre><code class="language-julia hljs">Param = vcat(μ_true, θ_true)
+@benchmark hier_log_posterior($Param, $data)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 10000 samples with 9 evaluations per sample.
+ Range (min … max):  2.088 μs …   6.001 μs  ┊ GC (min … max): 0.00% … 0.00%
+ Time  (median):     2.090 μs               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   2.112 μs ± 154.663 ns  ┊ GC (mean ± σ):  0.00% ± 0.00%
+
+  █                                                           ▁
+  █▇▇▆▄▆▆▆▆▄▄▃▄▃▃▃▄▅▄▄▃▄▃▄▃▄▃▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▃▆█▇▇ █
+  2.09 μs      Histogram: log(frequency) by time      2.97 μs &lt;
+
+ Memory estimate: 0 bytes, allocs estimate: 0.</code></pre><pre><code class="language-julia hljs">@benchmark group_conditional(3, $Param, $data)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">BenchmarkTools.Trial: 10000 samples with 646 evaluations per sample.
+ Range (min … max):  190.611 ns … 273.293 ns  ┊ GC (min … max): 0.00% … 0.00%
+ Time  (median):     190.628 ns               ┊ GC (median):    0.00%
+ Time  (mean ± σ):   192.399 ns ±   4.701 ns  ┊ GC (mean ± σ):  0.00% ± 0.00%
+
+  █▁                                      ▂▂▂▁▁                 ▁
+  ███▆▆▄▅▅▅▆▆▇█▆▆▅▄▃▄▅▃▄▁▄▁▃▄▃▁▃▄▄▆▄▄▄▁▃▆███████████▇▇▆▇▆▆▆▆▆▆▆ █
+  191 ns        Histogram: log(frequency) by time        208 ns &lt;
+
+ Memory estimate: 0 bytes, allocs estimate: 0.</code></pre><p>Wiring this into <code>AGESSSampler</code> just means building one <code>AGESSBlock</code> per group with its <code>conditional</code>, plus a block for <code>μ</code> left on the default (full <code>hier_log_posterior</code>) path: <code>μ</code>&#39;s own prior doesn&#39;t touch any <code>θ_g</code>, but each <code>θ_g</code>&#39;s prior depends on <code>μ</code>, so <code>μ</code>&#39;s full conditional needs every group&#39;s <code>θ_g</code> and so isn&#39;t separable the same way.</p><pre><code class="language-julia hljs">blocks = [AGESSBlock([1 + g]; conditional = p -&gt; group_conditional(g, p, data)) for g in 1:G]
+push!(blocks, AGESSBlock([1]))
+
+n_MCMC = 10_000
+chain = AGESS(p -&gt; hier_log_posterior(p, data), n_MCMC, 1 + G; blocks = blocks)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Chains MCMC chain (10000×12×1 Array{Float64, 3}):
+
+Iterations        = 1:1:10000
+Number of chains  = 1
+Samples per chain = 10000
+Wall duration     = 0.77 seconds
+Compute duration  = 0.77 seconds
+parameters        = param_1, param_2, param_3, param_4, param_5, param_6, param_7, param_8, param_9, param_10, param_11
+internals         = lp
+
+Use `describe(chains)` for summary statistics and quantiles.
+</code></pre><p>For Turing.jl models we can also utilize <code>AGESSSampler</code>&#39;s <code>blocks</code>. Using the same setup, we can set up our Turing.jl model as follows:</p><pre><code class="language-julia hljs">using Turing
+
+@model function local_model(data_g, μ)
+    θ ~ Normal(μ, 1)
+    data_g .~ Normal(θ, 1.0)
+end
+
+@model function full_model(data)
+    G = length(data)
+    μ ~ Normal(0.0, 1.0)
+    θ ~ filldist(Normal(μ, 1.0), G)
+    for g in 1:G
+        for i in eachindex(data[g])
+            data[g][i] ~ Normal(θ[g], 1.0)
+        end
+    end
+end
+
+# Note: We can also write the model using the local model, but we will get warnings for growable
+# arrays. Note that these warnings do not affect the correctness of the sampling scheme.
+# @model function full_model(data, G)
+#    μ ~ Normal(0, 1)
+#    θ = Vector{Float64}(undef, G)
+#    for g in 1:G
+#        θ[g] ~ to_submodel(local_model(data[g], μ))
+#    end
+# end
+
+# μ at index 1; group g&#39;s θ at index 1 + g
+blocks = [AGESSBlock([1 + g], ctx -&gt; local_model(data[g], ctx[1]), [1]) for g in 1:G]
+push!(blocks, AGESSBlock([1]))  # μ stays on the default (full log_posterior) path
+
+agessB = AGESSSampler(full_model(data), n_MCMC; blocks = blocks)
+chain_turing = sample(full_model(data), agessB, n_MCMC)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Chains MCMC chain (10000×12×1 Array{Float64, 3}):
+
+Iterations        = 1:1:10000
+Number of chains  = 1
+Samples per chain = 10000
+Wall duration     = 2.19 seconds
+Compute duration  = 2.19 seconds
+parameters        = μ, θ[1], θ[2], θ[3], θ[4], θ[5], θ[6], θ[7], θ[8], θ[9], θ[10]
+internals         = lp
+
+Use `describe(chains)` for summary statistics and quantiles.
+</code></pre><div class="admonition is-success"><header class="admonition-header">Key takeaway</header><div class="admonition-body"><p>If your model has natural conditional independence structure where part of the likelihood does not depend on a block of parameters, <code>AGESSSampler</code>&#39;s <code>blocks</code> keyword can significantly reduce computational costs – particularly in high-dimensional settings. However, correctness depends on <code>conditional</code> actually being a valid restriction of <code>log_posterior</code>. A block left without a <code>conditional</code> always falls back to the full <code>log_posterior</code>, so when in doubt, leave it out rather than risk a subtly wrong <code>conditional</code>.</p></div></div><hr/><p><em>This page was generated using <a href="https://github.com/fredrikekre/Literate.jl">Literate.jl</a>.</em></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../assets/Documentation/">« Documentation</a><a class="docs-footer-nextpage" href="../Banana/">Banana »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.25 on <span class="colophon-date" title="Wednesday 26 August 2026 20:33">Wednesday 26 August 2026</span>. Using Julia version 1.12.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
