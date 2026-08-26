@@ -1,7 +1,7 @@
 # # Performance Tips
 
 # Julia is a dynamic programming language that allows for high performance computing. However,
-# Julia features optional typing can lead to slow performance. Since the `AGESS` function essentially
+# Julia's optional typing can lead to slow performance if left unspecified. Since the `AGESS` function essentially
 # only requires the user to specify a function evaluating the log target distribution, it is
 # paramount that the user specifies an efficient implementation of this function, as this function
 # will constantly be called in the `AGESS` function. Here, we will give a quick example of 3
@@ -145,3 +145,122 @@ ph = zeros(1000)
 # * Pre-allocate variables (especially for intermediate computations)
 #
 # * `@views` can help reduce allocating new arrays when doing computations on subarrays
+
+# ## Block Updates
+
+# Writing an efficient `log_posterior` is crucial, but for high-dimensional target distributions
+# we still perform 1-d updates during the burn-in stage, as well as randomly throughout (as controlled
+# by `single_step_prop`). However, if your model has structure -- such as a hierarchical model
+# where we have conditional independence between blocks of parameters and do not need to compute the entire
+# posterior to calculate the conditional density -- we can significantly
+# reduce the computational burden of these 1-d updates by using `AGESSSampler`'s `blocks`. Here,
+# we will provide an example of fitting a hierarchical model using these `blocks` (using a direct
+# specification of the log target density, and separately using the Turing.jl ecosystem).
+
+# Consider a simple hierarchical model: 
+#
+# $$Y_{ig} \sim \mathcal{N}(\theta_g, 1), \qquad \theta_g \sim \mathcal{N}(\mu, 1).$$
+#
+# We can simulate data as follows.
+
+G = 10
+n_g = 200
+μ_true = 1.0
+θ_true = μ_true .+ 0.5 .* randn(G)
+data = [θ_true[g] .+ randn(n_g) for g in 1:G]
+
+# We will first start by explicitly specifying the blocks and the log target density.
+
+## Param layout: Param[1] = μ, Param[1+g] = θ_g for g in 1:G.
+function hier_log_posterior(Param::AbstractVector{Y}, data) where {Y<:AbstractFloat}
+    μ = Param[1]
+    lpdf = -0.5 * μ^2
+    for g in eachindex(data)
+        θ_g = Param[1 + g]
+        lpdf += -0.5 * (θ_g - μ)^2
+        for y in data[g]
+            lpdf += -0.5 * (y - θ_g)^2
+        end
+    end
+    return lpdf
+end
+
+# The full `hier_log_posterior` above touches every group's data on every call, even when only
+# `θ_g` for one group is changing. A block's `conditional` gets to see the same full parameter
+# vector, but only needs to return the parts of the density that actually depend on its own
+# block. Here, updating `θ_g` only needs group `g`'s own data:
+
+function group_conditional(g::Integer, Param::AbstractVector{Y}, data) where {Y<:AbstractFloat}
+    μ = Param[1]
+    θ_g = Param[1 + g]
+    lpdf = -0.5 * (θ_g - μ)^2
+    for y in data[g]
+        lpdf += -0.5 * (y - θ_g)^2
+    end
+    return lpdf
+end
+
+# For $G=10$ groups of 200 observations each, that's roughly a 10-fold reduction in the amount
+# of data touched per call:
+
+Param = vcat(μ_true, θ_true)
+@benchmark hier_log_posterior($Param, $data)
+#-
+@benchmark group_conditional(3, $Param, $data)
+
+# Wiring this into `AGESSSampler` just means building one `AGESSBlock` per group with its
+# `conditional`, plus a block for `μ` left on the default (full `hier_log_posterior`) path:
+# `μ`'s own prior doesn't touch any `θ_g`, but each `θ_g`'s prior depends on `μ`, so `μ`'s full
+# conditional needs every group's `θ_g` and so isn't separable the same way.
+
+blocks = [AGESSBlock([1 + g]; conditional = p -> group_conditional(g, p, data)) for g in 1:G]
+push!(blocks, AGESSBlock([1]))
+
+n_MCMC = 10_000
+chain = AGESS(p -> hier_log_posterior(p, data), n_MCMC, 1 + G; blocks = blocks)
+
+# For Turing.jl models we can also utilize `AGESSSampler`'s `blocks`. Using the same setup,
+# we can set up our Turing.jl model as follows:
+
+using Turing
+
+@model function local_model(data_g, μ)
+    θ ~ Normal(μ, 1)
+    data_g .~ Normal(θ, 1.0)
+end
+
+@model function full_model(data)
+    G = length(data)
+    μ ~ Normal(0.0, 1.0)
+    θ ~ filldist(Normal(μ, 1.0), G)
+    for g in 1:G
+        for i in eachindex(data[g])
+            data[g][i] ~ Normal(θ[g], 1.0)
+        end
+    end
+end
+
+## Note: We can also write the model using the local model, but we will get warnings for growable
+## arrays. Note that these warnings do not affect the correctness of the sampling scheme.
+## @model function full_model(data, G)
+##    μ ~ Normal(0, 1)
+##    θ = Vector{Float64}(undef, G)
+##    for g in 1:G
+##        θ[g] ~ to_submodel(local_model(data[g], μ))
+##    end
+## end
+
+## μ at index 1; group g's θ at index 1 + g
+blocks = [AGESSBlock([1 + g], ctx -> local_model(data[g], ctx[1]), [1]) for g in 1:G]
+push!(blocks, AGESSBlock([1]))  # μ stays on the default (full log_posterior) path
+
+agessB = AGESSSampler(full_model(data), n_MCMC; blocks = blocks)
+chain_turing = sample(full_model(data), agessB, n_MCMC)
+
+# !!! tip "Key takeaway"
+#     If your model has natural conditional independence structure where part of the likelihood does
+#     not depend on a block of parameters, `AGESSSampler`'s `blocks` keyword can
+#     significantly reduce computational costs -- particularly in high-dimensional settings.
+#     However, correctness depends on `conditional` actually being a valid restriction of `log_posterior`.
+#     A block left without a `conditional` always falls back to the full `log_posterior`, so
+#     when in doubt, leave it out rather than risk a subtly wrong `conditional`.
